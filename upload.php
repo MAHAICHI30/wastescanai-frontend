@@ -3,6 +3,11 @@
 // 1. PHP 后端核心业务逻辑：拦截异步图片 ➡️ 呼叫 Python AI ➔ 写入 MySQL ➡️ 返回 JSON 结果
 // =========================================================================
 
+// 🔐 启动 Session 拦截会话，用于获取当前新注册/登录的账号用户名
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // 🔒 身份双重校验：不仅检查是不是 POST 和有图片，还要确保是来自本页面的 'gallery_upload' 请求
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && isset($_POST['identity']) && $_POST['identity'] === 'gallery_upload') {
     
@@ -11,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
     
     // 声明返回格式为标准的 JSON
     header('Content-Type: application/json');
+    
+    // 👤 获取当前登录的用户名（如果 session 里没有，给一个默认值防止报错，供未登录测试）
+    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
     
     // 🔌 【核心整合】：直接把数据库连接逻辑注入头部，不再依赖外部 include
     $host = "localhost";
@@ -68,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                     // 设置字符集编码防止乱码
                     $conn->set_charset("utf8mb4");
 
-                    // 🌟 完美同步：将路径 $target_file 一并写入新创建的 image_path 字段！
-                    $stmt1 = $conn->prepare("INSERT INTO waste_records (record_type, material_type, image_path) VALUES ('upload', ?, ?)");
-                    $stmt1->bind_param("ss", $db_material, $target_file);
+                    // 🌟【核心修改点】：在 SQL 插入语句中加入 username 字段，并绑定 $username 变量
+                    $stmt1 = $conn->prepare("INSERT INTO waste_records (username, record_type, material_type, image_path) VALUES (?, 'upload', ?, ?)");
+                    $stmt1->bind_param("sss", $username, $db_material, $target_file);
                     $stmt1->execute();
                     $stmt1->close();
 
@@ -99,7 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                     'status' => 'success',
                     'prediction' => $ai_detected_material,
                     'box' => $box_coordinates,
-                    'image_path' => $target_file
+                    'image_path' => $target_file,
+                    'username' => $username // 方便前端控制台调试查看当前记录是谁的
                 ]);
             } else {
                 echo json_encode([
