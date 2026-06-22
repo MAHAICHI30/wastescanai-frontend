@@ -177,7 +177,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: #49cdd2;
         }
 
-        /* 🌟 精修对齐后的提交按钮，完美复刻系统级视觉比例 */
+        /* 🌟 新增：密码输入框包裹容器 */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .password-wrapper .input-field {
+            padding-right: 50px; /* 给右侧眼睛图标留出空位 */
+        }
+
+        /* 🌟 新增：小眼睛按钮定位与样式 */
+        .toggle-password {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover {
+            color: #49cdd2; /* 悬浮时呼应你的主题青色 */
+        }
+        .toggle-password svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* 精修对齐后的提交按钮 */
         .login-btn {
             width: 100%;
             background-color: #5ce1e6; /* 亮青色 */
@@ -249,12 +282,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="input-group">
                 <label class="input-label" for="password">Password</label>
-                <input type="password" id="password" class="input-field" name="password" required autocomplete="off" placeholder="Enter admin password">
+                <div class="password-wrapper">
+                    <input type="password" id="password" class="input-field" name="password" required autocomplete="off" placeholder="Enter admin password">
+                    <button type="button" id="togglePassword" class="toggle-password" title="Toggle password visibility">
+                        <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                    </button>
+                </div>
             </div>
             
             <button type="submit" class="login-btn">Login</button>
         </form>
     </div>
 
+    <script>
+        const togglePassword = document.querySelector('#togglePassword');
+        const passwordInput = document.querySelector('#password');
+        const eyeIcon = document.querySelector('#eyeIcon');
+
+        const eyeClosePath = `<path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />`;
+        const eyeOpenPath = `<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />`;
+
+        togglePassword.addEventListener('click', function () {
+            // 切换输入框类型
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // 根据当前状态切换眼睛图标图形
+            if (type === 'password') {
+                eyeIcon.innerHTML = eyeClosePath;
+            } else {
+                eyeIcon.innerHTML = eyeOpenPath;
+            }
+        });
+    </script>
 </body>
 </html>
