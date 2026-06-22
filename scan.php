@@ -3,6 +3,16 @@
 // 1. PHP 后端核心业务逻辑：拦截异步图片 ➡️ 呼叫 Python AI ➡️ 写入 MySQL ➡️ 返回 JSON 结果
 // =========================================================================
 
+// 🆕 开启 Session 拦截机制，抓取当前登录的用户名
+session_start();
+if (!isset($_SESSION['username'])) {
+    // 如果没有登录，返回错误 JSON，防止未登录用户刷接口
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'User is not logged in.']);
+    exit;
+}
+$username = $_SESSION['username']; // 成功抓取到当前登录的用户名！
+
 // 检查是否是一个来自摄像头异步 Fetch 的图片上传请求
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     
@@ -70,9 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
                 if ($conn && !$conn->connect_error) {
                     $conn->set_charset("utf8mb4");
 
-                    // 1. 写入历史总表（标记 record_type 为 'scan'，代表来自相机扫描）
-                    $stmt1 = $conn->prepare("INSERT INTO waste_records (record_type, material_type) VALUES ('scan', ?)");
-                    $stmt1->bind_param("s", $db_material);
+                    // 🆕 1. 写入历史总表（现在包含了 username 和 image_path 字段，并使用安全预处理）
+                    $stmt1 = $conn->prepare("INSERT INTO waste_records (username, record_type, material_type, image_path) VALUES (?, 'scan', ?, ?)");
+                    // "sss" 代表 3 个参数均为字符串：$username, $db_material, $target_file
+                    $stmt1->bind_param("sss", $username, $db_material, $target_file);
                     $stmt1->execute();
                     $stmt1->close();
 
@@ -141,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* 🆕 替换后的新型顶部导航栏：1:1 像素复刻第二张图 UI 规范 */
+        /* 🆕 替换后的新型顶部导航栏：1:1 像素复刻 UI 规范 */
         .app-bar-new {
             background-color: #ffffff;
             height: 60px;
