@@ -1,7 +1,15 @@
 <?php
 // ==========================================================================
-// 1. 建立真实的 MySQL 数据库连接并抓取数据
+// 1. 开启会话并建立真实的 MySQL 数据库连接（过滤当前登录用户的记录）
 // ==========================================================================
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 👤 检查用户是否登录，如果没有登录，可以重定向到登录页，或者给予一个默认值测试
+// header('Location: login.php'); exit; // 如果你有登录页，可以取消这行注释
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
+
 $host = "localhost";
 $db_user = "root";          
 $db_pass = "";              
@@ -15,7 +23,7 @@ if ($conn->connect_error) {
 
 $conn->set_charset("utf8mb4");
 
-// 抓取包含全新 image_path 的有效识别记录
+// 🌟【核心修改】：修改查询语句，添加 username = ? 的硬性绑定，只拉取当前新账号自己的数据
 $sql = "SELECT id, record_type, material_type, image_path, created_at,
         CASE 
             WHEN DATE(created_at) = CURDATE() THEN 'Today'
@@ -24,10 +32,14 @@ $sql = "SELECT id, record_type, material_type, image_path, created_at,
         END AS date_group,
         DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
         FROM waste_records 
-        WHERE material_type != 'unknown'
+        WHERE material_type != 'unknown' AND username = ?
         ORDER BY created_at DESC";
 
-$result = $conn->query($sql);
+// 使用预处理语句防止 SQL 注入，誓死保护新账号数据纯净
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $grouped_activities = [];
 if ($result && $result->num_rows > 0) {
@@ -37,6 +49,7 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
+$stmt->close();
 $conn->close();
 
 // 🎨 建立国家标准视觉颜色字典映射 (PHP 端控制)
@@ -102,7 +115,7 @@ $material_colors = [
         }
 
         .item-text-box { min-width: 0; }
-        .item-name { font-size: 16px; font-weight: 700; } /* 🌟 移除固定硬编码颜色 */
+        .item-name { font-size: 16px; font-weight: 700; } 
         .item-time-label { font-size: 11px; color: #999999; text-transform: uppercase; margin-top: 6px; }
         .item-time { font-size: 13px; color: #555555; font-weight: 500; margin-top: 1px; }
 
@@ -121,7 +134,7 @@ $material_colors = [
 
     <main class="main-container">
         <div class="page-header">
-            <h2>Recent Activity</h2>
+            <h2>Recent Activity (<?php echo htmlspecialchars($username); ?>)</h2>
             <p>Review and track your AI waste identification records.</p>
         </div>
 
@@ -142,17 +155,15 @@ $material_colors = [
                         $display_name = 'Aluminium';
                     }
                     
-                    // 🌟 核心调色：动态从字典中读取对应的配色，如果没找到则默认灰黑色 (#333)
+                    // 动态从字典中读取对应的配色
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
                     
-                    // 2. 核心修正位点：精准对齐系统里的相对文件路径进行检测
+                    // 2. 检查图片文件路径
                     $db_path = $activity['image_path'];
                     
                     if (!empty($db_path) && file_exists($db_path)) {
-                        // 如果在本地找到了当时上传的真实相片，立刻渲染它！
                         $final_img_src = $db_path;
                     } else {
-                        // 如果是老旧测试历史（无图数据），自动调用你的备用模版死图，防止破图
                         $fallback_material = ($raw_material === 'aluminum') ? 'aluminium' : $raw_material;
                         $final_img_src = "uploads/test_" . $fallback_material . ".jpg";
                     }
@@ -189,7 +200,7 @@ $material_colors = [
         ?>
             <div style="text-align: center; color: #999; padding: 40px 0; font-size: 14px;">
                 <i class="fa-solid fa-folder-open" style="font-size: 30px; color: #ccc; margin-bottom: 10px;"></i>
-                <p>No waste identification history records found.</p>
+                <p>No waste identification history records found for this account.</p>
             </div>
         <?php endif; ?>
     </main>
