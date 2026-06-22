@@ -2,7 +2,9 @@
 // ==========================================================================
 // 1. 开启 Session 会话拦截机制（确保用户必须登录才能进入主页）
 // ==========================================================================
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // 🔒 安全守卫：如果检测到没有真实的登录 Session 记录，强制拦截并重定向退回登录页
 if (!isset($_SESSION['username'])) {
@@ -15,7 +17,7 @@ $username = $_SESSION['username'];
 $account_status = isset($_SESSION['status']) ? $_SESSION['status'] : "Account Active";
 
 // ==========================================================================
-// 2. 建立真实的 MySQL 数据库连接并抓取最新 2 条历史记录
+// 2. 建立真实的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
 // ==========================================================================
 $host = "localhost";
 $db_user = "root";          // XAMPP 默认用户名
@@ -31,19 +33,23 @@ if ($conn->connect_error) {
 $conn->set_charset("utf8mb4");
 
 /**
- * 💡 核心 SQL 查询：
- * 1. 过滤掉 'unknown' 的无效识别数据。
- * 2. 增加 image_path 的动态路径调取。
+ * 💡 核心 SQL 查询优化：
+ * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
+ * 2. 过滤掉 'unknown' 的无效识别数据。
  * 3. 使用 LIMIT 2 限制数量，保持主页仪表盘的紧凑清爽。
  */
 $sql = "SELECT id, record_type, material_type, image_path, 
         DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
         FROM waste_records 
-        WHERE material_type != 'unknown'
+        WHERE username = ? AND material_type != 'unknown'
         ORDER BY created_at DESC 
         LIMIT 2";
 
-$result = $conn->query($sql);
+// 预处理执行流程，绑定当前登录的 $username 变量
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $username); 
+$stmt->execute();
+$result = $stmt->get_result(); 
 
 $recent_activities = [];
 if ($result && $result->num_rows > 0) {
@@ -52,9 +58,10 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
+$stmt->close();
 $conn->close(); // 释放连接
 
-// 🎨 建立国家标准视觉颜色字典映射 (与 history.php 完全对齐)
+// 建立视觉颜色字典映射
 $material_colors = [
     'plastic'   => '#D32F2F', // 红色
     'aluminum'  => '#FBC02D', // 黄色/金
@@ -140,7 +147,7 @@ $material_colors = [
         }
 
         /* ==========================================================================
-           5. 侧边抽屉导航栏 (Navigation Drawer)
+           5. 侧边抽屉导航栏 (Navigation Drawer) - 【移动端弹性自适应优化版】
            ========================================================================== */
         .drawer-overlay {
             position: fixed;
@@ -161,12 +168,14 @@ $material_colors = [
             left: -280px;
             width: 280px;
             height: 100vh;
+            /* 🌟 核心升级：利用 dvh 动态计算手机浏览器控制栏弹出后的真实可视高度 */
+            height: 100dvh; 
             background-color: #ffffff;
             z-index: 1002;
             box-shadow: 5px 0 15px rgba(0,0,0,0.1);
             transition: left 0.3s ease;
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* 纵向 Flex 容器结构 */
         }
 
         .drawer-open .nav-drawer { left: 0; }
@@ -177,6 +186,7 @@ $material_colors = [
             color: #ffffff;
             padding: 35px 20px 22px 20px;
             position: relative;
+            flex-shrink: 0; /* 🌟 保护头部高度，绝不参与内容压缩 */
         }
 
         .close-btn {
@@ -209,7 +219,14 @@ $material_colors = [
         .user-text h4 { font-size: 16px; font-weight: 600; }
         .user-text p { font-size: 12px; color: #E8F5E9; margin-top: 4px; opacity: 0.9; }
 
-        .drawer-menu { flex: 1; padding: 15px 0; overflow-y: auto; }
+        /* 🌟 核心升级：菜单区域自适应撑开并允许内部滚动 */
+        .drawer-menu { 
+            flex: 1; 
+            padding: 15px 0; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; /* 让 iOS 滚动更滑溜 */
+        }
+        
         .menu-item {
             display: flex;
             align-items: center;
@@ -227,7 +244,17 @@ $material_colors = [
         .menu-item:hover i, .menu-item.active i { color: #2E7D32; }
         
         .drawer-divider { height: 1px; background-color: #EEEEEE; margin: 10px 0; }
-        .drawer-footer { padding: 15px 0; border-top: 1px solid #EEEEEE; }
+        
+        /* 🌟 核心升级：底部固定区域，永远封底，并留出手机屏幕下缘安全边距 */
+        .drawer-footer { 
+            padding: 10px 0; 
+            border-top: 1px solid #EEEEEE; 
+            flex-shrink: 0; /* 拒绝缩水 */
+            background-color: #ffffff;
+            /* 智能读取全面屏手机下方的触控小黑条安全区域高度，留出合适呼吸空间 */
+            margin-bottom: max(10px, env(safe-area-inset-bottom)); 
+        }
+        
         .logout-item { color: #d32f2f; }
         .logout-item i { color: #d32f2f; }
         .logout-item:hover { background-color: #FFEBEE; }
@@ -380,7 +407,7 @@ $material_colors = [
         }
 
         .item-text-box { min-width: 0; }
-        .item-name { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 🌟 移除固定硬编码颜色 */
+        .item-name { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } 
         .item-time-label { font-size: 11px; color: #999999; text-transform: uppercase; margin-top: 6px; }
         .item-time { font-size: 13px; color: #555555; font-weight: 500; margin-top: 1px; }
 
@@ -488,28 +515,21 @@ $material_colors = [
         <section class="activity-card-stream">
             
             <?php 
-            // ==========================================================================
-            // 9. PHP 核心：循环遍历动态渲染真实的 MySQL 记录与真实证实图片
-            // ==========================================================================
             if (!empty($recent_activities)):
                 foreach ($recent_activities as $activity): 
                     $raw_material = $activity['material_type'];
                     
-                    // 统一材质词汇大写规范
                     $display_name = ucfirst($raw_material);
                     if ($raw_material === 'aluminum') {
                         $display_name = 'Aluminium';
                     }
 
-                    // 🌟 核心调色：主页动态从字典中读取对应的配色
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
 
-                    // 🔮 证实相片加载：检查真实路径是否在服务器物理磁盘中存在
                     $db_path = $activity['image_path'];
                     if (!empty($db_path) && file_exists($db_path)) {
                         $final_img_src = $db_path;
                     } else {
-                        // 降级兜底默认素材死图
                         $fallback_name = ($raw_material === 'aluminum') ? 'aluminium' : $raw_material;
                         $final_img_src = "uploads/test_" . $fallback_name . ".jpg";
                     }
@@ -542,7 +562,7 @@ $material_colors = [
             else:
             ?>
                 <div class="activity-item" style="justify-content: center; color: #999; padding: 20px;">
-                    No recent activity found.
+                    No recent activity found for this account.
                 </div>
             <?php endif; ?>
 
