@@ -2,10 +2,11 @@
 // =======================================================
 // 1. 建立数据库连接 (XAMPP MySQL) - 首次进入页面时的初始化渲染
 // =======================================================
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "wastescanaidb";
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
+$user = 'root';
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
