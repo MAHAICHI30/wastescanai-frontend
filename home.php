@@ -19,10 +19,11 @@ $account_status = isset($_SESSION['status']) ? $_SESSION['status'] : "Account Ac
 // ==========================================================================
 // 2. 建立真实的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
 // ==========================================================================
-$host = "localhost";
-$db_user = "root";          // XAMPP 默认用户名
-$db_pass = "";              // XAMPP 默认密码
-$db_name = "wastescanaidb"; // 你的数据库名称
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
+$user = 'root';
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+
 
 $conn = new mysqli($host, $db_user, $db_pass, $db_name);
 
