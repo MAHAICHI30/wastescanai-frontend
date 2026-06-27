@@ -2,10 +2,11 @@
 session_start();
 
 // 真实数据库连接配置
-$host = '127.0.0.1';
-$dbname = 'wastescanaidb';
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
 $user = 'root';
-$pass = ''; // 如果没有设置密码就留空
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+
 
 $message = '';
 $message_type = 'error'; 
