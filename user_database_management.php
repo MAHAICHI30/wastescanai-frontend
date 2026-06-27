@@ -1,9 +1,9 @@
 <?php
 // 1. 配置数据库连接参数
-$servername = "localhost";
-$username = "root";       // XAMPP 默认用户名
-$password = "";           // XAMPP 默认密码为空
-$dbname = "wastescanaidb"; // 你的数据库名称
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
+$user = 'root';
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
 
 // 创建连接
 $conn = new mysqli($servername, $username, $password, $dbname);
