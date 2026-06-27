@@ -336,7 +336,7 @@ if (isset($_GET['code'])) {
             </div>
             
             <div class="forget-pwd-container">
-                <a href="reset password.php" class="forget-pwd-link">forget password ?</a>
+                <a href="reset_password.php" class="forget-pwd-link">forget password ?</a>
             </div>
         </div>
 
