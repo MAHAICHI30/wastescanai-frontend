@@ -3,11 +3,10 @@
 session_start();
 
 // 2. 真实数据库连接配置
-$host = '127.0.0.1';
-$dbname = 'wastescanaidb';
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
 $user = 'root';
-$pass = ''; // 如果你的 XAMPP/WAMP 数据库没有设置密码就留空
-
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
 $error_message = '';
 
 // 3. 安全防护：如果管理员已经处于登录状态，直接跳到实际的管理员主页 dashboard.php
