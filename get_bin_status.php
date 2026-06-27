@@ -1,10 +1,11 @@
 <?php
 header('Content-Type: application/json');
 
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "wastescanaidb";
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
+$user = 'root';
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+$error_message = '';
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
