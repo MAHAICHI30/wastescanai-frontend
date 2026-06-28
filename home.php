@@ -6,9 +6,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
-
-
 // 🔒 安全守卫：如果检测到没有真实的登录 Session 记录，强制拦截并重定向退回登录页
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -22,12 +19,12 @@ $account_status = isset($_SESSION['status']) ? $_SESSION['status'] : "Account Ac
 // ==========================================================================
 // 2. 建立真实的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
 // ==========================================================================
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+$host = "localhost";
+$db_user = "root";          // XAMPP 默认用户名
+$db_pass = "";              // XAMPP 默认密码
+$db_name = "wastescanaidb"; // 你的数据库名称
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+$conn = new mysqli($host, $db_user, $db_pass, $db_name);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
