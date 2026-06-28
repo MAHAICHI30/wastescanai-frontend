@@ -9,11 +9,10 @@ define('GOOGLE_CLIENT_ID', '801797539566-r5ltjl5m3fj79hr4mt4b4sl5v8pli1nd.apps.g
 define('GOOGLE_CLIENT_SECRET', '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');
 define('GOOGLE_REDIRECT_URI', 'http://localhost/WasteScan%20AI/login.php'); // 必须与 Google 控制台完全一致
 
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
+$host = '127.0.0.1';
+$dbname = 'wastescanaidb';
 $user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
-
+$pass = ''; 
 
 $error = '';
 $success = '';
@@ -337,7 +336,7 @@ if (isset($_GET['code'])) {
             </div>
             
             <div class="forget-pwd-container">
-                <a href="reset_password.php" class="forget-pwd-link">forget password ?</a>
+                <a href="reset password.php" class="forget-pwd-link">forget password ?</a>
             </div>
         </div>
 
