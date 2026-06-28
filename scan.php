@@ -23,13 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     header('Content-Type: application/json');
     
     // 🔌 【核心整合】：直接将数据库配置注入头部，不再依赖外部 include 'db.php';
-    $host = 'mysql.railway.internal';
-    $dbname = 'railway';
-    $user = 'root';
-    $pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
-   
-    // 建立 MySQL 数据库连接
-    $conn = new mysqli($host, $db_user, $db_pass, $db_name);
+$host = 'mysql.railway.internal';
+$dbname = 'railway';
+$user = 'root';
+$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+
+$conn = new mysqli($host, $user, $pass, $dbname);
     
     $upload_dir = 'upload/';
     if (!is_dir($upload_dir)) {
