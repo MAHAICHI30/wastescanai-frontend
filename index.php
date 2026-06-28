@@ -6,7 +6,7 @@ $path = trim($path, '/');
 
 // 如果访问根目录，跳转到 login.php
 if (empty($path)) {
-    $path = 'login.php';
+    $path = 'welcome.php';
 }
 
 // 检查文件是否存在
