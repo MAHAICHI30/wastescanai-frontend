@@ -23,12 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     header('Content-Type: application/json');
     
     // 🔌 【核心整合】：直接将数据库配置注入头部，不再依赖外部 include 'db.php';
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+    $host = "localhost";
+    $db_user = "root";          // XAMPP 默认数据库用户名
+    $db_pass = "";              // XAMPP 默认数据库密码
+    $db_name = "wastescanaidb"; // 你的数据库名字
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+    // 建立 MySQL 数据库连接
+    $conn = new mysqli($host, $db_user, $db_pass, $db_name);
     
     $upload_dir = 'upload/';
     if (!is_dir($upload_dir)) {
