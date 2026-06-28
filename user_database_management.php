@@ -5,8 +5,7 @@ $dbname = 'railway';
 $user = 'root';
 $pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
 
-// 创建连接
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $user, $pass, $dbname);
 
 // 检查连接是否成功
 if ($conn->connect_error) {
