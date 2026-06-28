@@ -7,8 +7,7 @@ $dbname = 'railway';
 $user = 'root';
 $pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
 
-
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $user, $pass, $dbname);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
