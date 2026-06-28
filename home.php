@@ -6,6 +6,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// 引入统一数据库配置
+require_once 'db_config.php';
+
+
 // 🔒 安全守卫：如果检测到没有真实的登录 Session 记录，强制拦截并重定向退回登录页
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
