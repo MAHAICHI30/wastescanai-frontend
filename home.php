@@ -6,41 +6,24 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
-
-
 // 🔒 安全守卫：如果检测到没有真实的登录 Session 记录，强制拦截并重定向退回登录页
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
 }
 
+// 引入统一数据库配置（连接由 db_config.php 提供）
+require_once 'db_config.php';
+
 // 动态捞出当前系统成功登录的真实账户信息
 $username = $_SESSION['username']; 
 $account_status = isset($_SESSION['status']) ? $_SESSION['status'] : "Account Active";
 
 // ==========================================================================
-// 2. 建立真实的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
+// 2. 数据库连接已由 db_config.php 提供，直接使用 $conn
 // ==========================================================================
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
 
-$conn = new mysqli($host, $user, $pass, $dbname);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
-}
-
-$conn->set_charset("utf8mb4");
-
-/**
- * 💡 核心 SQL 查询优化：
- * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
- * 2. 过滤掉 'unknown' 的无效识别数据。
- * 3. 使用 LIMIT 2 限制数量，保持主页仪表盘的紧凑清爽。
- */
+// 查询当前登录用户的最新 2 条历史记录
 $sql = "SELECT id, record_type, material_type, image_path, 
         DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
         FROM waste_records 
@@ -48,7 +31,6 @@ $sql = "SELECT id, record_type, material_type, image_path,
         ORDER BY created_at DESC 
         LIMIT 2";
 
-// 预处理执行流程，绑定当前登录的 $username 变量
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username); 
 $stmt->execute();
@@ -62,15 +44,17 @@ if ($result && $result->num_rows > 0) {
 }
 
 $stmt->close();
-$conn->close(); // 释放连接
+$conn->close();
 
 // 建立视觉颜色字典映射
 $material_colors = [
-    'plastic'   => '#D32F2F', // 红色
-    'aluminum'  => '#FBC02D', // 黄色/金
-    'aluminium' => '#FBC02D', // 兼容防错
-    'paper'     => '#1565C0'  // 蓝色
+    'plastic'   => '#D32F2F',
+    'aluminum'  => '#FBC02D',
+    'aluminium' => '#FBC02D',
+    'paper'     => '#1565C0'
 ];
+?>
+<!-- 后面的 HTML 代码保持不变 ... -->
 ?>
 <!DOCTYPE html>
 <html lang="en">
