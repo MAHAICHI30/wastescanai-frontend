@@ -10,12 +10,12 @@ if (session_status() === PHP_SESSION_NONE) {
 // header('Location: login.php'); exit; // 如果你有登录页，可以取消这行注释
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
 
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+$host = "localhost";
+$db_user = "root";          
+$db_pass = "";              
+$db_name = "wastescanaidb"; 
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+$conn = new mysqli($host, $db_user, $db_pass, $db_name);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
