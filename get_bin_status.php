@@ -5,9 +5,8 @@ $host = 'mysql.railway.internal';
 $dbname = 'railway';
 $user = 'root';
 $pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
-$error_message = '';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $user, $pass, $dbname);
 
 if ($conn->connect_error) {
     echo json_encode(["success" => false, "message" => "Database connection failed"]);
