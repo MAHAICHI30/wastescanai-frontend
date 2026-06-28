@@ -133,15 +133,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
 
     <main class="dashboard-container">
         <div class="action-grid">
-            <a href="monitor_waste_trend.php" class="action-card">
+            <a href="monitor waste trend.php" class="action-card">
                 Monitor Waste Trend
             </a>
             
-            <a href="recycle_bin_status.php" class="action-card">
+            <a href="recycle bin status.php" class="action-card">
                 View Recycle Bin Status
             </a>
             
-            <a href="user_database_management.php" class="action-card">
+            <a href="user database management.php" class="action-card">
                 Manage User Database
             </a>
         </div>
