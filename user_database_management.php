@@ -1,11 +1,12 @@
 <?php
 // 1. 配置数据库连接参数
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+$servername = "localhost";
+$username = "root";       // XAMPP 默认用户名
+$password = "";           // XAMPP 默认密码为空
+$dbname = "wastescanaidb"; // 你的数据库名称
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+// 创建连接
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // 检查连接是否成功
 if ($conn->connect_error) {
