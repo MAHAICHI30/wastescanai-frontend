@@ -2,12 +2,12 @@
 // =======================================================
 // 1. 建立数据库连接 (XAMPP MySQL)
 // =======================================================
-$host = 'mysql.railway.internal';
-$dbname = 'railway';
-$user = 'root';
-$pass = 'VpUQTVAAjVaDLhqBcUZMfxoJhHEpPRKx'; 
+$servername = "localhost";
+$username = "root";
+$password = ""; 
+$dbname = "wastescanaidb";
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
