@@ -1,12 +1,16 @@
 <?php
+// WasteScan AI - Admin Portal Login Page
 // 1. 启动全局会话控制
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 2. 真实数据库连接配置
-$host = '127.0.0.1';
-$dbname = 'wastescanaidb';
-$user = 'root';
-$pass = ''; // 如果你的 XAMPP/WAMP 数据库没有设置密码就留空
+// 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
 $error_message = '';
 
@@ -18,7 +22,8 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 
 // 4. 建立数据库连接
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    // 注入端口支持，保证容器环境无缝切换
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
     $error_message = "Database connection failed: " . $e->getMessage();
@@ -85,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 16px;
         }
 
-        /* 🌟 与其它表单页完全对齐的白色立体卡片外框 */
+        /* 与其它表单页完全对齐的白色立体卡片外框 */
         .login-card {
             max-width: 400px;
             width: 100%;
@@ -177,16 +182,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: #49cdd2;
         }
 
-        /* 🌟 新增：密码输入框包裹容器 */
+        /* 密码输入框包裹容器 */
         .password-wrapper {
             position: relative;
             width: 100%;
         }
         .password-wrapper .input-field {
-            padding-right: 50px; /* 给右侧眼睛图标留出空位 */
+            padding-right: 50px;
         }
 
-        /* 🌟 新增：小眼睛按钮定位与样式 */
+        /* 小眼睛按钮定位与样式 */
         .toggle-password {
             position: absolute;
             right: 18px;
@@ -203,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: color 0.2s;
         }
         .toggle-password:hover {
-            color: #49cdd2; /* 悬浮时呼应你的主题青色 */
+            color: #49cdd2;
         }
         .toggle-password svg {
             width: 22px;
@@ -213,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         /* 精修对齐后的提交按钮 */
         .login-btn {
             width: 100%;
-            background-color: #5ce1e6; /* 亮青色 */
+            background-color: #5ce1e6;
             color: #081c2c;
             border: none;
             padding: 13px 0;
@@ -305,11 +310,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const eyeOpenPath = `<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />`;
 
         togglePassword.addEventListener('click', function () {
-            // 切换输入框类型
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
             
-            // 根据当前状态切换眼睛图标图形
             if (type === 'password') {
                 eyeIcon.innerHTML = eyeClosePath;
             } else {
