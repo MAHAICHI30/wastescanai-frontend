@@ -1,6 +1,9 @@
 <?php
+// WasteScan AI - Admin Hub Dashboard Portal
 // 1. 启动全局会话控制
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // 2. 权限安全拦截：检查管理员是否正常登录。如果没有登录凭证，直接拦截并驱逐回 admin.php
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
@@ -25,7 +28,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     // 彻底摧毁服务器端的会话数据
     session_destroy();
     
-    // 【核心修正点 1】Session 彻底销毁后，利落地重定向跳回管理员登录页
+    // Session 彻底销毁后，安全重定向跳回管理员登录页
     header('Location: admin.php');
     exit;
 }
@@ -54,8 +57,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             background-color: #f2e1c1; /* 浅米黄色 */
             padding: 15px 50px;
             display: flex;
-            justify-content: space-between;
             box-sizing: border-box;
+            align-items: center;
+        }
+
+        /* 🌟 优化：在 RUP 界面结构中加入更高级的分布式自适应两端分散对齐 */
+        .nav-links {
+            flex: 1;
+            text-align: left;
+        }
+
+        .nav-logout {
+            text-align: right;
         }
 
         .top-nav a {
@@ -133,15 +146,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
 
     <main class="dashboard-container">
         <div class="action-grid">
-            <a href="monitor waste trend.php" class="action-card">
+            <a href="monitor%20waste%20trend.php" class="action-card">
                 Monitor Waste Trend
             </a>
             
-            <a href="recycle bin status.php" class="action-card">
+            <a href="recycle%20bin%20status.php" class="action-card">
                 View Recycle Bin Status
             </a>
             
-            <a href="user database management.php" class="action-card">
+            <a href="user%20database%20management.php" class="action-card">
                 Manage User Database
             </a>
         </div>
