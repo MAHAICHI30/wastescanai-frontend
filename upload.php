@@ -1,6 +1,6 @@
 <?php
 // =========================================================================
-// 1. PHP 后端核心业务逻辑：拦截异步图片 ➡️ 呼叫 Python AI ➔ 写入 MySQL ➡️ 返回 JSON 结果
+// 1. 开启 Session 会话拦截机制（确保用户必须登录才能进入主页）
 // =========================================================================
 
 // 🔐 启动 Session 拦截会话，用于获取当前新注册/登录的账号用户名
@@ -20,14 +20,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
     // 👤 获取当前登录的用户名（如果 session 里没有，给一个默认值防止报错，供未登录测试）
     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
     
-    // 🔌 【核心整合】：直接把数据库连接逻辑注入头部，不再依赖外部 include
-    $host = "localhost";
-    $db_user = "root";          // XAMPP 默认数据库用户名
-    $db_pass = "";              // XAMPP 默认数据库密码
-    $db_name = "wastescanaidb"; // 你的数据库名字
+    // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+    $host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+    $port = $_ENV['MYSQLPORT'] ?? 3306;
+    $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端会自动被覆盖为 railway
+    $user = $_ENV['MYSQLUSER'] ?? 'root';
+    $pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
-    // 建立 MySQL 数据库连接
-    $conn = new mysqli($host, $db_user, $db_pass, $db_name);
+    // 建立标准 PDO 数据库连接
+    try {
+        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch(PDOException $e) {
+        ob_end_clean();
+        echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
+        exit;
+    }
     
     $upload_dir = 'upload/';
     if (!is_dir($upload_dir)) {
@@ -39,13 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
 
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-        // B. 利用 CURL 将图片转发给 5001 端口的 Python Flask AI 引擎
-        $flask_url = 'http://127.0.0.1:5001/predict';
+        // B. 🌟 线上部署重大修复：利用 Railway 私有网络变量连接 Python 后端服务
+        // 如果在云端，Railway 的私有网络会直接通过内网地址互通，速度极快且不消耗外网流量
+        $flask_url = isset($_ENV['RAILWAY_VOLUME_MOUNT_PATH']) || isset($_ENV['MYSQLHOST'])
+            ? 'http://wastescanai-backend.railway.internal:5001/predict' 
+            : 'http://127.0.0.1:5001/predict'; // 本地回退测试地址
+
         $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $flask_url);
+        curl_setopt($ch, @CURLOPT_URL, $flask_url);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -66,34 +78,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                 $db_material = $ai_detected_material;
             }
 
-            // 💡 主动式捕获报错机制
+            // 💡 主动式捕获数据库报错机制
             $db_success = true;
             $error_msg = "";
 
             try {
-                // 检查连接是否成功建立
-                if ($conn && !$conn->connect_error) {
-                    // 设置字符集编码防止乱码
-                    $conn->set_charset("utf8mb4");
+                // 🌟 使用 PDO 的事务来执行多表安全操作
+                $pdo->beginTransaction();
 
-                    // 🌟【核心修改点】：在 SQL 插入语句中加入 username 字段，并绑定 $username 变量
-                    $stmt1 = $conn->prepare("INSERT INTO waste_records (username, record_type, material_type, image_path) VALUES (?, 'upload', ?, ?)");
-                    $stmt1->bind_param("sss", $username, $db_material, $target_file);
-                    $stmt1->execute();
-                    $stmt1->close();
+                // 🆕 1. 写入历史总表
+                $stmt1 = $pdo->prepare("INSERT INTO waste_records (username, record_type, material_type, image_path) VALUES (?, 'upload', ?, ?)");
+                $stmt1->execute([$username, $db_material, $target_file]);
 
-                    // 2. 更新垃圾桶状态表自增 +1 (供 Doughnut Chart 调用)
-                    $stmt2 = $conn->prepare("UPDATE recycle_bins SET current_volume = current_volume + 1 WHERE bin_name = ?");
-                    $stmt2->bind_param("s", $db_material);
-                    $stmt2->execute();
-                    $stmt2->close();
-                    
-                    $conn->close();
-                } else {
-                    $db_success = false;
-                    $error_msg = "Database connection initialization failed: " . ($conn ? $conn->connect_error : "Connection object is null");
-                }
+                // 2. 更新垃圾桶状态表自增 +1
+                $stmt2 = $pdo->prepare("UPDATE recycle_bins SET current_volume = LEAST(current_volume + 1, 100) WHERE bin_name = ?");
+                $stmt2->execute([$db_material]);
+                
+                $pdo->commit();
             } catch (Exception $db_error) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 $db_success = false;
                 $error_msg = "MySQL Execution Error: " . $db_error->getMessage();
             }
@@ -108,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                     'prediction' => $ai_detected_material,
                     'box' => $box_coordinates,
                     'image_path' => $target_file,
-                    'username' => $username // 方便前端控制台调试查看当前记录是谁的
+                    'username' => $username 
                 ]);
             } else {
                 echo json_encode([
@@ -119,9 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                 ]);
             }
         } else {
-            if ($conn && !$conn->connect_error) $conn->close();
             ob_end_clean();
-            echo json_encode(['status' => 'error', 'message' => 'AI Server recognition failed.']);
+            echo json_encode(['status' => 'error', 'message' => 'AI Server recognition failed or timed out.']);
         }
     } else {
         ob_end_clean();
@@ -423,10 +427,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
 
             const formData = new FormData();
             formData.append('waste_image', fileInput.files[0]);
-            // 🌟 核心升级：强制打上独属于上传页面的身份印记，杜绝外部越界污染
             formData.append('identity', 'gallery_upload'); 
 
             try {
+                // 🌟 直接呼叫同域下的本地中转控制层，云端保持路径一致
                 const response = await fetch('upload.php', {
                     method: 'POST',
                     body: formData
@@ -437,10 +441,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                 setTimeout(() => {
                     displayArea.classList.remove('scanning');
 
-                    if (result.status === 'success') {
-                        renderResultData(result.prediction, result.box);
-                    } else if (result.status === 'db_error') {
-                        alert("⚠️ AI recognition successful but Database Error occurred:\n" + result.message);
+                    if (result.status === 'success' || result.status === 'db_error') {
+                        if (result.status === 'db_error') {
+                            console.warn("Database sync warning: " + result.message);
+                        }
                         renderResultData(result.prediction, result.box);
                     } else {
                         alert("AI Engine response: " + result.message);
@@ -451,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
             } catch (error) {
                 displayArea.classList.remove('scanning');
                 console.error("AJAX Fetch failed:", error);
-                alert("Cannot reach the AI Core. Check if XAMPP Apache and Flask Server are fully alive.");
+                alert("Cannot reach the cloud backend server. Please verify your internet connection.");
                 goToHome();
             }
         }
