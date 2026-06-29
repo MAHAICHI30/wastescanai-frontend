@@ -4,7 +4,10 @@
 // =========================================================================
 
 // 🆕 开启 Session 拦截机制，抓取当前登录的用户名
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['username'])) {
     // 如果没有登录，返回错误 JSON，防止未登录用户刷接口
     header('Content-Type: application/json');
@@ -22,14 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     // 声明返回格式为标准的 JSON，方便前端 JavaScript 解析
     header('Content-Type: application/json');
     
-    // 🔌 【核心整合】：直接将数据库配置注入头部，不再依赖外部 include 'db.php';
-    $host = "localhost";
-    $db_user = "root";          // XAMPP 默认数据库用户名
-    $db_pass = "";              // XAMPP 默认数据库密码
-    $db_name = "wastescanaidb"; // 你的数据库名字
+    // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+    $host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+    $port = $_ENV['MYSQLPORT'] ?? 3306;
+    $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
+    $user = $_ENV['MYSQLUSER'] ?? 'root';
+    $pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
     // 建立 MySQL 数据库连接
-    $conn = new mysqli($host, $db_user, $db_pass, $db_name);
+    $conn = new mysqli($host, $user, $pass, $dbname, $port);
     
     $upload_dir = 'upload/';
     if (!is_dir($upload_dir)) {
@@ -39,17 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     $file_name = time() . '_' . basename($_FILES['waste_image']['name']);
     $target_file = $upload_dir . $file_name;
 
-    // A. 先把摄像头截取的图片安全保存到 XAMPP 本地服务器
+    // A. 先把摄像头截取的图片安全保存到云端前端服务器
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-        // B. 利用 CURL 将图片转发给 5001 端口的 Python Flask AI 引擎
-        $flask_url = 'http://127.0.0.1:5001/predict';
+        // B. 🌟 线上部署重大修复：利用 Railway 私有网络变量连接 Python 后端服务
+        // 如果在云端，Railway 的私有网络会直接通过内网地址互通，速度极快且不消耗外网流量
+        $flask_url = isset($_ENV['RAILWAY_VOLUME_MOUNT_PATH']) || isset($_ENV['MYSQLHOST'])
+            ? 'http://wastescanai-backend.railway.internal:5001/predict' 
+            : 'http://127.0.0.1:5001/predict'; // 本地回退测试地址
+
         $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
 
         $ch = curl_init();
-        $get_url = $flask_url;
-        curl_setopt($ch, CURLOPT_URL, $get_url);
+        curl_setopt($ch, CURLOPT_URL, $flask_url);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -126,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
         } else {
             if ($conn && !$conn->connect_error) $conn->close();
             ob_end_clean();
-            echo json_encode(['status' => 'error', 'message' => 'AI Server recognition failed.']);
+            echo json_encode(['status' => 'error', 'message' => 'AI Server recognition failed or timed out.']);
         }
     } else {
         if ($conn && !$conn->connect_error) $conn->close();
@@ -369,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
             }
         }
 
-        // 🎯 触发拍照、捕捉 Canvas 并异步传送给后端 Python 核心
+        // 🎯 触发拍照、捕捉 Canvas 并异步传送给后端 PHP
         function startScanning() {
             displayArea.classList.add('scanning');
 
@@ -390,6 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
                 formData.append('waste_image', blob, 'webcam_capture.jpg');
 
                 try {
+                    // 🌟 核心突破：直接向同服务器下的 scan.php 发送 POST 异步表单
                     const response = await fetch('scan.php', {
                         method: 'POST',
                         body: formData
@@ -401,12 +409,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
                     setTimeout(() => {
                         displayArea.classList.remove('scanning');
                         
-                        if (result.status === 'success') {
-                            renderResultData(result.prediction, result.box);
-                            resultScreen.style.display = 'flex';
-                            controlsBar.style.display = 'none';
-                        } else if (result.status === 'db_error') {
-                            alert("⚠️ AI recognition successful but Database Error occurred:\n" + result.message);
+                        if (result.status === 'success' || result.status === 'db_error') {
+                            if (result.status === 'db_error') {
+                                console.warn("Database sync warning: " . result.message);
+                            }
                             renderResultData(result.prediction, result.box);
                             resultScreen.style.display = 'flex';
                             controlsBar.style.display = 'none';
@@ -419,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
                 } catch (error) {
                     displayArea.classList.remove('scanning');
                     console.error("AJAX Fetch failed:", error);
-                    alert("Cannot reach the AI Core. Check if XAMPP Apache and Flask Server are fully alive.");
+                    alert("Cannot reach the cloud backend server. Please verify your internet connection.");
                 }
             }, 'image/jpeg', 0.9);
         }
@@ -431,7 +437,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
 
             resBBox.style.borderColor = config.color;
             
-            // 基于 YOLO 传回的百分比坐标进行定位
+            // 基于 YOLO 传回的百分比坐标进行自适应定位
             resBBox.style.top = boxCoordinates[0] + "%";
             resBBox.style.left = boxCoordinates[1] + "%";
             resBBox.style.height = boxCoordinates[2] + "%";
