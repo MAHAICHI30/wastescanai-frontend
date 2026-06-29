@@ -2,4 +2,4 @@
 php = {}
 
 [start]
-cmd = "apache2-foreground"
+cmd = "apache2-foreground -g 'DocumentRoot /app'"
