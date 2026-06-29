@@ -1,18 +1,23 @@
 <?php
-session_start();
+// WasteScan AI - Reset Password Page
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 真实数据库连接配置
-$host = '127.0.0.1';
-$dbname = 'wastescanaidb';
-$user = 'root';
-$pass = ''; // 如果没有设置密码就留空
+// 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端会自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
 $message = '';
 $message_type = 'error'; 
 
 // 建立数据库连接
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    // 注入端口变量，保障容器化环境链路畅通
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
     $message = "Database connection failed: " . $e->getMessage();
@@ -74,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        /* 统一大背景为高质感淡灰 */
         body {
             background-color: #f4f6f8;
             display: flex;
@@ -84,7 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 16px;
         }
 
-        /* 🌟 与其它表单页完全绝对对齐的白色立体卡片外框 */
         .reset-card {
             max-width: 400px;
             width: 100%;
@@ -162,16 +165,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: #49cdd2;
         }
 
-        /* 包裹密码输入框的容器 */
         .password-wrapper {
             position: relative;
             width: 100%;
         }
         .password-wrapper input {
-            padding-right: 50px; /* 给右侧的小眼睛留出安全空间 */
+            padding-right: 50px;
         }
 
-        /* 小眼睛按钮的定位与样式 */
         .toggle-password {
             position: absolute;
             right: 18px;
@@ -195,7 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             height: 22px;
         }
 
-        /* 精修微调后的长条确认大按钮 */
         .btn-confirm {
             width: 100%;
             padding: 13px 0;
