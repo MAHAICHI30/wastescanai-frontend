@@ -1,24 +1,36 @@
 <?php
-// =======================================================
-// 1. 建立数据库连接 (XAMPP MySQL)
-// =======================================================
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "wastescanaidb";
+// WasteScan AI - Admin Analytics Board
+// 1. 开启会话并建立真实的 MySQL 数据库连接
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+// 🔒 权限安全拦截：检查管理员是否正常登录
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: admin.php');
+    exit;
+}
+
+// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
+
+// 使用面向对象风格连接 MySQL（注入端口支持）
+$conn = new mysqli($host, $user, $pass, $dbname, $port);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
 }
+$conn->set_charset("utf8mb4");
 
 // =======================================================
 // 2. 核心数据解析：过去 24 小时内精准扫描上传时间数据
 // =======================================================
 $today_data = ['Plastic' => [], 'Aluminum' => [], 'Paper' => []];
 
-// 🌟 自动化修改点：直接取出过去 24 小时内的精确时间戳 (created_at)
 $today_query = "SELECT material_type, created_at 
                 FROM waste_records 
                 WHERE created_at >= NOW() - INTERVAL 24 HOUR
@@ -27,17 +39,28 @@ $today_query = "SELECT material_type, created_at
 $today_res = $conn->query($today_query);
 
 if ($today_res && $today_res->num_rows > 0) {
-    // 动态累加计数器，用来形成趋势
     $running_counts = ['Plastic' => 0, 'Aluminum' => 0, 'Paper' => 0];
     
     while ($row = $today_res->fetch_assoc()) {
-        $b_type = ucfirst(strtolower($row['material_type'])); 
+        $raw_type = strtolower($row['material_type']);
+        
+        // 🌟 强力兼容防御：将小写或拼写拼错的铝(aluminium)统一规整映射为大屏幕对应的 Aluminum 字典键
+        $b_type = 'Plastic';
+        if ($raw_type === 'aluminum' || $raw_type === 'aluminium') {
+            $b_type = 'Aluminum';
+        } elseif ($raw_type === 'paper') {
+            $b_type = 'Paper';
+        } elseif ($raw_type === 'plastic') {
+            $b_type = 'Plastic';
+        } else {
+            continue; // 过滤掉 unknown 的类型
+        }
+
         if (isset($running_counts[$b_type])) {
-            $running_counts[$b_type]++; // 每扫描上传一个，数量递增
+            $running_counts[$b_type]++; 
             
-            // 将精确的上传时间与当时的累计数量存入数组
             $today_data[$b_type][] = [
-                'x' => $row['created_at'], // 完美的格式：YYYY-MM-DD HH:MM:SS
+                'x' => $row['created_at'], 
                 'y' => $running_counts[$b_type]
             ];
         }
@@ -54,20 +77,27 @@ $weekly_data = [
     'Paper'    => [0,0,0,0,0,0,0]
 ];
 
-$weekly_query = "SELECT material_type, 
-                        DAYNAME(created_at) as day_name,
-                        COUNT(id) as total_count
+// 🌟 核心 SQL 升级：采用 CASE WHEN 将底层存储的各种铝拼写合并分组，防止线上统计结果遗漏
+$weekly_query = "SELECT 
+                    CASE 
+                        WHEN LOWER(material_type) = 'aluminium' THEN 'aluminum'
+                        ELSE LOWER(material_type)
+                    END as unified_material, 
+                    DAYNAME(created_at) as day_name,
+                    COUNT(id) as total_count
                  FROM waste_records 
                  WHERE WEEK(created_at, 1) = WEEK(CURDATE(), 1) AND YEAR(created_at) = YEAR(CURDATE())
-                 GROUP BY material_type, day_name";
+                 GROUP BY unified_material, day_name";
 
 $weekly_res = $conn->query($weekly_query);
 $day_map = ['Monday'=>'Mon', 'Tuesday'=>'Tue', 'Wednesday'=>'Wed', 'Thursday'=>'Thu', 'Friday'=>'Fri', 'Saturday'=>'Sat', 'Sunday'=>'Sun'];
 
 if ($weekly_res && $weekly_res->num_rows > 0) {
     while ($row = $weekly_res->fetch_assoc()) {
-        $b_type = ucfirst(strtolower($row['material_type']));
+        $raw_mat = $row['unified_material'];
+        $b_type = ($raw_mat === 'aluminum') ? 'Aluminum' : ucfirst($raw_mat);
         $full_day = $row['day_name'];
+        
         if (isset($day_map[$full_day])) {
             $short_day = $day_map[$full_day];
             $idx = array_search($short_day, $weekly_labels);
@@ -126,7 +156,7 @@ $conn->close();
             <a href="dashboard.php">Dashboard</a> &rarr; Monitor Waste Trend
         </div>
         <div class="nav-logout">
-            <a href="welcome.php">Logout</a>
+            <a href="dashboard.php?action=logout">Logout</a>
         </div>
     </nav>
 
@@ -145,7 +175,6 @@ $conn->close();
     </main>
 
     <script>
-        // 从 PHP 获取精准时间点数据
         const todayDatasets = [
             { label: 'Plastic', data: <?php echo json_encode($today_data['Plastic']); ?>, borderColor: '#ff4d4d', backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 3, tension: 0.1 },
             { label: 'Aluminum', data: <?php echo json_encode($today_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.1 },
@@ -158,7 +187,6 @@ $conn->close();
             { label: 'Paper', data: <?php echo json_encode($weekly_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.4 }
         ];
 
-        // 🌟 核心配置：动态定义两套不同的坐标轴表现（包含强制整数轴修复）
         const viewOptions = {
             today: {
                 scales: {
@@ -175,7 +203,6 @@ $conn->close();
                     y: { 
                         beginAtZero: true, 
                         title: { display: true, text: 'Scanned Items Count' },
-                        // 🌟 这里加入了强制整数刻度的控制逻辑
                         ticks: {
                             stepSize: 1,
                             precision: 0,
@@ -194,7 +221,6 @@ $conn->close();
                     y: { 
                         beginAtZero: true, 
                         title: { display: true, text: 'Total Bins Collected / Day' },
-                        // 🌟 周视图也同步加上整数限制
                         ticks: {
                             stepSize: 1,
                             precision: 0
@@ -207,7 +233,6 @@ $conn->close();
         const ctx = document.getElementById('wasteTrendChart').getContext('2d');
         let currentView = 'today';
 
-        // 初始化图表
         const wasteTrendChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -222,7 +247,6 @@ $conn->close();
             }
         });
 
-        // 视图切换逻辑
         function switchView(view, event) {
             currentView = view;
 
@@ -238,7 +262,6 @@ $conn->close();
                 wasteTrendChart.data.datasets = weeklyDatasets;
             }
 
-            // 动态更新轴控制策略
             wasteTrendChart.options.scales = viewOptions[view].scales;
             wasteTrendChart.update();
         }
