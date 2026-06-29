@@ -1,6 +1,0 @@
-[providers]
-php = {}
-
-[start]
-# 去掉硬编码的 /app，直接使用系统默认当前的根目录启动
-cmd = "apache2-foreground"
