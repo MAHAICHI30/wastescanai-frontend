@@ -5,18 +5,18 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端会自动被覆盖为 railway
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端会自动被环境变量 railway 覆盖
 $user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
 $error_message = '';
 $username = '';
 $email = '';
 
 try {
-    // 注入端口变量，保障容器化环境链路畅通
+    // 🌟 完美绑定端口变量，保障容器化环境链路畅通
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
@@ -67,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,178 +74,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WasteScan AI - Sign Up</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        body {
-            background-color: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 16px;
-        }
-
-        .signup-card {
-            max-width: 400px;
-            width: 100%;
-            background: #ffffff;
-            border-radius: 40px;
-            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.12);
-            padding: 36px 28px 40px 28px;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .welcome-title {
-            font-size: 32px;
-            font-weight: 500;
-            color: #0a1c2f;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .logo-container {
-            margin-bottom: 35px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .logo-img {
-            width: 160px;
-            height: auto;
-            display: block;
-            object-fit: contain;
-        }
-
-        .input-group {
-            width: 100%;
-            margin-bottom: 15px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .input-group label {
-            font-size: 14px;
-            color: #333;
-            margin-bottom: 6px;
-            margin-left: 5px;
-            font-weight: 500;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 14px 18px;
-            font-size: 15px;
-            border: 1px solid #ddd;
-            border-radius: 30px;
-            background-color: #ffffff;
-            outline: none;
-            color: #333;
-            transition: border-color 0.2s;
-        }
-
-        .input-group input:focus {
-            border-color: #49cdd2;
-        }
-
-        .input-group input::placeholder {
-            color: #aaa;
-            opacity: 1;
-        }
-
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .password-wrapper input {
-            padding-right: 50px;
-        }
-        
-        .toggle-password {
-            position: absolute;
-            right: 18px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777;
-            transition: color 0.2s;
-        }
-        .toggle-password:hover {
-            color: #49cdd2;
-        }
-        .toggle-password svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .signup-btn {
-            width: 100%;
-            background-color: #dbf1f1;
-            color: #1e3046;
-            border: none;
-            padding: 13px 0;
-            font-size: 17px;
-            border-radius: 30px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-weight: 600;
-            transition: background-color 0.2s ease;
-        }
-
-        .signup-btn:hover {
-            background-color: #caeaea;
-        }
-
-        .error-message {
-            background-color: #ffe6e6;
-            color: #d32f2f;
-            padding: 10px 15px;
-            border: 1px solid #ffcdd2;
-            border-radius: 30px;
-            font-size: 14px;
-            margin-bottom: 18px;
-            width: 100%;
-            text-align: center;
-        }
-
-        @media (max-width: 450px) {
-            .signup-card {
-                padding: 28px 20px 32px 20px;
-                border-radius: 30px;
-            }
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+        .signup-card { max-width: 400px; width: 100%; background: #ffffff; border-radius: 40px; box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.12); padding: 36px 28px 40px 28px; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; }
+        .welcome-title { font-size: 32px; font-weight: 500; color: #0a1c2f; margin-bottom: 15px; text-align: center; }
+        .logo-container { margin-bottom: 35px; display: flex; justify-content: center; align-items: center; }
+        .logo-img { width: 160px; height: auto; display: block; object-fit: contain; }
+        .input-group { width: 100%; margin-bottom: 15px; position: relative; display: flex; flex-direction: column; align-items: flex-start; }
+        .input-group label { font-size: 14px; color: #333; margin-bottom: 6px; margin-left: 5px; font-weight: 500; }
+        .input-group input { width: 100%; padding: 14px 18px; font-size: 15px; border: 1px solid #ddd; border-radius: 30px; background-color: #ffffff; outline: none; color: #333; transition: border-color 0.2s; }
+        .input-group input:focus { border-color: #49cdd2; }
+        .input-group input::placeholder { color: #aaa; opacity: 1; }
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper input { padding-right: 50px; }
+        .toggle-password { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #777; transition: color 0.2s; }
+        .toggle-password:hover { color: #49cdd2; }
+        .toggle-password svg { width: 22px; height: 22px; }
+        .signup-btn { width: 100%; background-color: #dbf1f1; color: #1e3046; border: none; padding: 13px 0; font-size: 17px; border-radius: 30px; cursor: pointer; margin-top: 15px; font-weight: 600; transition: background-color 0.2s ease; }
+        .signup-btn:hover { background-color: #caeaea; }
+        .error-message { background-color: #ffe6e6; color: #d32f2f; padding: 10px 15px; border: 1px solid #ffcdd2; border-radius: 30px; font-size: 14px; margin-bottom: 18px; width: 100%; text-align: center; }
+        @media (max-width: 450px) { .signup-card { padding: 28px 20px 32px 20px; border-radius: 30px; } }
     </style>
 </head>
 <body>
 
     <div class="signup-card">
         <h1 class="welcome-title">Welcome</h1>
-
         <div class="logo-container">
-            <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo" class="logo-img">
+            <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo" class="logo-img" onerror="this.src='https://placehold.co/180x80?text=WasteScan+AI'">
         </div>
 
         <?php if ($error_message): ?>
             <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
         <?php endif; ?>
 
-        <form method="POST" action="" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <form method="POST" action="sign_up.php" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             
             <div class="input-group">
                 <label for="username">Username</label>
@@ -284,7 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <button type="submit" class="signup-btn">Sign up</button>
         </form>
-        
     </div>
 
 <script>
@@ -308,6 +169,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     });
 </script>
-
 </body>
 </html>
