@@ -6,51 +6,54 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 👤 检查用户是否登录，如果没有登录，可以重定向到登录页，或者给予一个默认值测试
-// header('Location: login.php'); exit; // 如果你有登录页，可以取消这行注释
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
-
-$host = "localhost";
-$db_user = "root";          
-$db_pass = "";              
-$db_name = "wastescanaidb"; 
-
-$conn = new mysqli($host, $db_user, $db_pass, $db_name);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+// 👤 检查用户是否登录，如果没有登录，强制重定向退回登录页
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
 }
 
-$conn->set_charset("utf8mb4");
+$username = $_SESSION['username'];
 
-// 🌟【核心修改】：修改查询语句，添加 username = ? 的硬性绑定，只拉取当前新账号自己的数据
-$sql = "SELECT id, record_type, material_type, image_path, created_at,
-        CASE 
-            WHEN DATE(created_at) = CURDATE() THEN 'Today'
-            WHEN DATE(created_at) = SUBDATE(CURDATE(), 1) THEN 'Yesterday'
-            ELSE DATE_FORMAT(created_at, '%M %d, %Y')
-        END AS date_group,
-        DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
-        FROM waste_records 
-        WHERE material_type != 'unknown' AND username = ?
-        ORDER BY created_at DESC";
-
-// 使用预处理语句防止 SQL 注入，誓死保护新账号数据纯净
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
+// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $grouped_activities = [];
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $group_name = $row['date_group'];
-        $grouped_activities[$group_name][] = $row;
-    }
-}
 
-$stmt->close();
-$conn->close();
+try {
+    // 🌟 升级为标准 PDO 驱动，完美保持技术栈一致与安全防注入
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // 🌟【核心查询】：添加 username = ? 的硬性绑定，只拉取当前登录账号自己的数据
+    $sql = "SELECT id, record_type, material_type, image_path, created_at,
+            CASE 
+                WHEN DATE(created_at) = CURDATE() THEN 'Today'
+                WHEN DATE(created_at) = SUBDATE(CURDATE(), 1) THEN 'Yesterday'
+                ELSE DATE_FORMAT(created_at, '%M %d, %Y')
+            END AS date_group,
+            DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
+            FROM waste_records 
+            WHERE material_type != 'unknown' AND username = ?
+            ORDER BY created_at DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$username]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($results)) {
+        foreach ($results as $row) {
+            $group_name = $row['date_group'];
+            $grouped_activities[$group_name][] = $row;
+        }
+    }
+
+} catch (PDOException $e) {
+    // 调试期可开启：echo "Error: " . $e->getMessage();
+}
 
 // 🎨 建立国家标准视觉颜色字典映射 (PHP 端控制)
 $material_colors = [
@@ -147,12 +150,13 @@ $material_colors = [
             <section class="activity-card-stream">
                 <?php 
                 foreach ($items as $activity): 
-                    $raw_material = $activity['material_type'];
+                    $raw_material = strtolower($activity['material_type']);
                     
                     // 1. 标准化材质显示文字
                     $display_name = ucfirst($raw_material);
-                    if ($raw_material === 'aluminum') {
+                    if ($raw_material === 'aluminum' || $raw_material === 'aluminium') {
                         $display_name = 'Aluminium';
+                        $raw_material = 'aluminium'; // 规整化映射配色
                     }
                     
                     // 动态从字典中读取对应的配色
@@ -164,11 +168,11 @@ $material_colors = [
                     if (!empty($db_path) && file_exists($db_path)) {
                         $final_img_src = $db_path;
                     } else {
-                        $fallback_material = ($raw_material === 'aluminum') ? 'aluminium' : $raw_material;
-                        $final_img_src = "uploads/test_" . $fallback_material . ".jpg";
+                        $final_img_src = "uploads/test_" . $raw_material . ".jpg";
                     }
                     
-                    $is_scan   = ($activity['record_type'] === 'scan');
+                    // 完美兼容你后端写入的 'scan' 和 'AI_Scan' 记录类型
+                    $is_scan   = ($activity['record_type'] === 'scan' || $activity['record_type'] === 'AI_Scan');
                     $badge_cls = $is_scan ? 'method-scan' : 'method-upload';
                     $icon_cls  = $is_scan ? 'fa-camera' : 'fa-cloud-arrow-up';
                     $btn_text  = $is_scan ? 'Scan' : 'Upload';
