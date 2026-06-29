@@ -1,0 +1,5 @@
+[providers]
+php = {}
+
+[start]
+cmd = "apache2-foreground"
