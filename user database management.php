@@ -1,20 +1,34 @@
 <?php
-// 1. 配置数据库连接参数
-$servername = "localhost";
-$username = "root";       // XAMPP 默认用户名
-$password = "";           // XAMPP 默认密码为空
-$dbname = "wastescanaidb"; // 你的数据库名称
+// WasteScan AI - User Database Management
+// 1. 启动全局会话控制
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 创建连接
-$conn = new mysqli($servername, $username, $password, $dbname);
+// 🔒 权限安全拦截：检查管理员是否正常登录
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: admin.php');
+    exit;
+}
+
+// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+
+// 创建数据库连接（注入端口支持）
+$conn = new mysqli($host, $user, $pass, $dbname, $port);
 
 // 检查连接是否成功
 if ($conn->connect_error) {
-    die("数据库连接失败: " . $conn->connect_error);
+    die("Database connection failed: " . $conn->connect_error);
 }
+$conn->set_charset("utf8mb4");
 
-// 2. 编写 SQL 查询语句（包含最新的 last_active 字段）
-$sql = "SELECT id, username, email, last_active FROM users";
+// 2. 编写 SQL 查询语句（只拉取注册的用户数据）
+$sql = "SELECT id, username, email, last_active FROM users ORDER BY id ASC";
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -74,7 +88,7 @@ $result = $conn->query($sql);
         }
 
         .dashboard-logo {
-            width: 150px; /* 较小的展示尺寸 */
+            width: 150px; 
             height: auto;
             margin-bottom: 20px;
         }
@@ -108,11 +122,10 @@ $result = $conn->query($sql);
         .database-table td {
             padding: 15px;
             border: 1px solid #ddd;
-            height: 30px; /* 确保空格子也有高度 */
+            height: 30px; 
             color: #444;
         }
 
-        /* 斑马纹效果 */
         .database-table tr:nth-child(even) {
             background-color: #fafafa;
         }
@@ -125,13 +138,13 @@ $result = $conn->query($sql);
             <a href="dashboard.php">Dashboard</a> &rarr; User Database Management
         </div>
         <div class="nav-logout">
-            <a href="welcome.php">Logout</a>
+            <a href="dashboard.php?action=logout">Logout</a>
         </div>
     </nav>
 
     <header class="page-header">
         <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo" class="dashboard-logo">
-        <div class="page-title"></div>
+        <div class="page-title">User Database Management</div>
     </header>
 
     <table class="database-table">
@@ -160,7 +173,7 @@ $result = $conn->query($sql);
                     echo "</tr>";
                 }
             } else {
-                echo "<tr><td colspan='4' style='text-align:center;'>暂无用户数据</td></tr>";
+                echo "<tr><td colspan='4' style='text-align:center;'>No user records found.</td></tr>";
             }
             
             // 关闭数据库连接
