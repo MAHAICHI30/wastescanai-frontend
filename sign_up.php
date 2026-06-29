@@ -1,17 +1,23 @@
 <?php
-// 数据库连接
-$host = '127.0.0.1';
-$dbname = 'wastescanaidb';
-$user = 'root';
-$pass = ''; // 如果没有设置密码就留空
+// WasteScan AI User Registration Page
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端会自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $error_message = '';
-// 初始化变量，确保首次进入页面时绝对为空
 $username = '';
 $email = '';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    // 注入端口变量，保障容器化环境链路畅通
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
     $error_message = "Database connection failed: " . $e->getMessage();
@@ -34,25 +40,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = "Please enter a valid email address.";
     } else {
-        // 检查用户名或邮箱是否已存在
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $email]);
-        
-        if ($stmt->rowCount() > 0) {
-            $error_message = "Username or email already exists.";
-        } else {
-            // 哈希密码并插入数据库
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        try {
+            // 检查用户名或邮箱是否已存在
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+            $stmt->execute([$username, $email]);
             
-            $stmt = $pdo->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
-            
-            if ($stmt->execute([$username, $email, $hashed_password])) {
-                // 注册成功，跳转到登录页面
-                header("Location: login.php");
-                exit();
+            if ($stmt->rowCount() > 0) {
+                $error_message = "Username or email already exists.";
             } else {
-                $error_message = "Something went wrong. Please try again.";
+                // 哈希密码并插入数据库
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                
+                $stmt = $pdo->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
+                
+                if ($stmt->execute([$username, $email, $hashed_password])) {
+                    // 注册成功，跳转到登录页面
+                    header("Location: login.php");
+                    exit();
+                } else {
+                    $error_message = "Something went wrong. Please try again.";
+                }
             }
+        } catch (PDOException $e) {
+            $error_message = "Query operation failed: " . $e->getMessage();
         }
     }
 }
@@ -72,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        /* 统一大背景为高质感淡灰 */
         body {
             background-color: #f4f6f8;
             display: flex;
@@ -82,7 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 16px;
         }
 
-        /* 与 login.php 完美对齐的白色立体卡片边框外框 */
         .signup-card {
             max-width: 400px;
             width: 100%;
@@ -156,16 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             opacity: 1;
         }
 
-        /* 专门针对密码包装盒的布局 */
         .password-wrapper {
             position: relative;
             width: 100%;
         }
         .password-wrapper input {
-            padding-right: 50px; /* 留出右侧空间放眼睛图标 */
+            padding-right: 50px;
         }
         
-        /* 独立眼睛控制按钮定位样式 */
         .toggle-password {
             position: absolute;
             right: 18px;
@@ -182,14 +188,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: color 0.2s;
         }
         .toggle-password:hover {
-            color: #49cdd2; /* 悬浮时呼应主题色 */
+            color: #49cdd2;
         }
         .toggle-password svg {
             width: 22px;
             height: 22px;
         }
 
-        /* 精修对齐后的提交注册按钮 */
         .signup-btn {
             width: 100%;
             background-color: #dbf1f1;
