@@ -1,12 +1,12 @@
 <?php
 // ==========================================================================
-// 1. 开启会话并建立真实的 MySQL 数据库连接（过滤当前登录用户的记录）
+// 1. 开启会话并建立自适应的 MySQL PDO 连接（过滤当前登录用户的记录）
 // ==========================================================================
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 👤 检查用户是否登录，如果没有登录，强制重定向退回登录页
+// 🔒 安全守卫：检查用户是否登录，如果没有登录，强制重定向退回登录页
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
@@ -15,11 +15,11 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 
 // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端自动被覆盖为 railway
 $user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
 $grouped_activities = [];
 
@@ -28,7 +28,7 @@ try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // 🌟【核心查询】：添加 username = ? 的硬性绑定，只拉取当前登录账号自己的数据
+    // 🌟【隔离机制】：添加 username = ? 绑定，只拉取当前登录账号自己的数据
     $sql = "SELECT id, record_type, material_type, image_path, created_at,
             CASE 
                 WHEN DATE(created_at) = CURDATE() THEN 'Today'
