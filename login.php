@@ -15,11 +15,11 @@ $current_domain = $protocol . $_SERVER['HTTP_HOST'];
 define('GOOGLE_REDIRECT_URI', strpos($_SERVER['HTTP_HOST'], 'localhost') !== false ? 'http://localhost/WasteScan%20AI/login.php' : $current_domain . '/login.php'); 
 
 // 🌟 线上部署核心修正：完美对接 Railway 云端内网 MySQL 数据库的环境变量
-$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端会自动被环境变量 railway 覆盖
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端会自动被环境变量 railway 覆盖
 $user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $error = '';
 $success = '';
