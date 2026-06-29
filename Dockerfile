@@ -1,8 +1,11 @@
 FROM php:8.2-cli
 
-# 将前端所有 PHP/HTML 代码复制到容器的工作目录中
+# 安装并启用 PHP 连接 MySQL 必须的 PDO 驱动组件
+RUN docker-php-ext-install pdo pdo_mysql
+
+# 将前端代码复制到工作目录
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
 
-# 启动 PHP 官方原生内置的 Web 服务，并动态监听 Railway 分配的任何端口
+# 启动原生内置服务
 CMD ["sh", "-c", "php -S 0.0.0.0:$PORT"]
