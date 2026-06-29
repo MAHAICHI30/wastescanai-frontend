@@ -1,17 +1,29 @@
 <?php
-// =======================================================
-// 1. 建立数据库连接 (XAMPP MySQL) - 首次进入页面时的初始化渲染
-// =======================================================
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "wastescanaidb";
+// WasteScan AI - Admin Recycle Bin Monitor
+// 1. 开启全局会话控制
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+// 🔒 权限安全拦截：检查管理员是否正常登录
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: admin.php');
+    exit;
+}
+
+// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+
+$conn = new mysqli($host, $user, $pass, $dbname, $port);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
 }
+$conn->set_charset("utf8mb4");
 
 $sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
 $result = $conn->query($sql);
@@ -24,7 +36,20 @@ $bin_data = [
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
-        $type = ucfirst(strtolower($row['bin_name'])); 
+        $raw_name = strtolower($row['bin_name']);
+        
+        // 规整映射，防止拼写和大小写产生数据滑坡
+        $type = 'Plastic';
+        if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
+            $type = 'Aluminum';
+        } elseif ($raw_name === 'paper') {
+            $type = 'Paper';
+        } elseif ($raw_name === 'plastic') {
+            $type = 'Plastic';
+        } else {
+            continue;
+        }
+
         if (isset($bin_data[$type])) {
             $bin_data[$type]['capacity'] = (int)$row['current_volume'];
             if (isset($row['status'])) {
@@ -85,7 +110,7 @@ $conn->close();
 
     <nav class="top-nav">
         <div class="breadcrumb"><a href="dashboard.php">Dashboard</a> &rarr; Recycle Bin Status</div>
-        <div class="nav-logout"><a href="welcome.php">Logout</a></div>
+        <div class="nav-logout"><a href="dashboard.php?action=logout">Logout</a></div>
     </nav> 
 
     <header class="page-header">
@@ -104,7 +129,7 @@ $conn->close();
                     <span class="capacity" id="plasticLitre">Capacity: <?php echo $bin_data['Plastic']['capacity']; ?>L / 100L</span>
                 </div>
             </div>
-            <button id="plasticBtn" class="cleared-btn <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full') ? '' : 'disabled'; ?>>Cleared</button>
+            <button id="plasticBtn" class="cleared-btn <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
         </div>
 
         <div class="bin-card" id="aluminumCard">
@@ -117,7 +142,7 @@ $conn->close();
                     <span class="capacity" id="aluminumLitre">Capacity: <?php echo $bin_data['Aluminum']['capacity']; ?>L / 100L</span>
                 </div>
             </div>
-            <button id="aluminumBtn" class="cleared-btn <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full') ? '' : 'disabled'; ?>>Cleared</button>
+            <button id="aluminumBtn" class="cleared-btn <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full' || $bin_data['Aluminum']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full' || $bin_data['Aluminum']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
         </div>
 
         <div class="bin-card" id="paperCard">
@@ -130,13 +155,13 @@ $conn->close();
                     <span class="capacity" id="paperLitre">Capacity: <?php echo $bin_data['Paper']['capacity']; ?>L / 100L</span>
                 </div>
             </div>
-            <button id="paperBtn" class="cleared-btn <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full') ? '' : 'disabled'; ?>>Cleared</button>
+            <button id="paperBtn" class="cleared-btn <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
         </div>
     </main>
 
     <script>
         const chartInstances = {};
-        let isResetting = false; // 用于加锁，防止重置网络请求期间被轮询打断
+        let isResetting = false; 
 
         function generateChartOptions(percentage, mainColor) {
             return {
@@ -156,16 +181,12 @@ $conn->close();
             };
         }
 
-        // 初始化三大图表
         chartInstances['Plastic'] = new Chart(document.getElementById('plasticChart'), generateChartOptions(<?php echo $bin_data['Plastic']['capacity']; ?>, '#e60000'));
         chartInstances['Aluminum'] = new Chart(document.getElementById('aluminumChart'), generateChartOptions(<?php echo $bin_data['Aluminum']['capacity']; ?>, '#ffcc00'));
         chartInstances['Paper'] = new Chart(document.getElementById('paperChart'), generateChartOptions(<?php echo $bin_data['Paper']['capacity']; ?>, '#0066cc'));
 
-        // =======================================================
-        // 核心：【全自动】实时轮询更新逻辑（每 2 秒悄悄读取一次数据库）
-        // =======================================================
         function updateDataAutomatically() {
-            if (isResetting) return; // 如果正在执行重置清零，暂时暂停自动更新，避免冲突
+            if (isResetting) return; 
 
             fetch('get_bin_status.php')
                 .then(res => res.json())
@@ -178,24 +199,20 @@ $conn->close();
                             const status = dbData[binType].status;
                             const chart = chartInstances[binType];
 
-                            // 1. 动态更新图表数值
                             chart.data.datasets[0].data = [capacity, 100 - capacity];
                             chart.options.borderRadius = capacity > 0 ? 10 : 0;
                             chart.update();
 
-                            // 2. 动态更新文字
                             document.getElementById(`${binType.toLowerCase()}Percent`).innerHTML = `${capacity}<span class="percentage-symbol">%</span>`;
                             document.getElementById(`${binType.toLowerCase()}Litre`).innerText = `Capacity: ${capacity}L / 100L`;
 
-                            // 3. 动态控制 Cleared 按钮形态 (>= 95% 变青色激活)
                             const btn = document.getElementById(`${binType.toLowerCase()}Btn`);
-                            if (capacity >= 95 || status === 'Full') {
+                            if (capacity >= 95 || status === 'Full' || status === 'Dispatched') {
                                 if (btn.classList.contains('status-empty')) {
                                     btn.className = 'cleared-btn status-full';
                                     btn.disabled = false;
                                 }
                             } else {
-                                // 没满的情况下，如果按钮不是处在点击重置的 loading 状态，则强制锁定为灰色
                                 if (btn.innerText === 'Cleared') {
                                     btn.className = 'cleared-btn status-empty';
                                     btn.disabled = true;
@@ -207,11 +224,10 @@ $conn->close();
                 .catch(err => console.error("Polling error:", err));
         }
 
-        // 启动定时器：每 2000 毫秒（2秒）自动更新一次页面
         setInterval(updateDataAutomatically, 2000);
 
         // ==========================================
-        // 点击 Cleared 按钮触发 Flask 后端清零
+        // 点击 Cleared 按钮触发云端 Flask 后端清零
         // ==========================================
         document.querySelectorAll('.cleared-btn').forEach(button => {
             button.addEventListener('click', function() {
@@ -219,24 +235,28 @@ $conn->close();
                 if (btn.classList.contains('status-empty')) return;
 
                 const binType = btn.id.replace('Btn', '');
-                // 首字母大写化以匹配 Python 后端命名
-                const formattedType = binType.charAt(0).toUpperCase() + binType.slice(1); 
+                // 🌟 材料拼写自适应转换 (前端 Aluminum ➔ 后端识别需要的 aluminium)
+                let formattedType = binType.charAt(0).toUpperCase() + binType.slice(1);
+                if (formattedType.toLowerCase() === 'aluminum') {
+                    formattedType = 'aluminium';
+                }
 
                 if (confirm(`Confirm that the ${formattedType} Bin has been emptied? This will reset the volume to 0%.`)) {
-                    isResetting = true; // 加锁
+                    isResetting = true; 
                     btn.disabled = true;
                     btn.innerText = 'Resetting...';
 
-                    fetch('http://127.0.0.1:5001/api/reset_bin', {
+                    // 🌟 线上部署重大核心修正：JavaScript 运行在浏览器端，必须请求 Python 服务的公网 HTTPS 链接！
+                    fetch('https://wastescanai-backend-production-1b25.up.railway.app/api/reset_bin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ bin_type: formattedType })
                     })
                     .then(res => res.json())
                     .then(data => {
+                        const displayType = formattedType === 'aluminium' ? 'Aluminum' : formattedType;
                         if (data.success) {
-                            // 立即前端复位
-                            const chart = chartInstances[formattedType];
+                            const chart = chartInstances[displayType];
                             chart.data.datasets[0].data = [0, 100]; 
                             chart.options.borderRadius = 0; 
                             chart.update(); 
@@ -248,7 +268,7 @@ $conn->close();
                             btn.className = 'cleared-btn status-empty';
                             btn.disabled = true; 
 
-                            alert(`${formattedType} Bin has been successfully reset!`);
+                            alert(`${displayType} Bin has been successfully reset!`);
                         } else {
                             alert('Failed to reset: ' + data.message);
                             btn.disabled = false;
@@ -257,12 +277,12 @@ $conn->close();
                     })
                     .catch(err => {
                         console.error('Error:', err);
-                        alert('Failed to contact Flask server.');
+                        alert('Failed to contact cloud AI backend server.');
                         btn.disabled = false;
                         btn.innerText = 'Cleared';
                     })
                     .finally(() => {
-                        isResetting = false; // 解锁，允许继续跟后台 YOLO 同步
+                        isResetting = false; 
                     });
                 }
             });
