@@ -17,49 +17,42 @@ $username = $_SESSION['username'];
 $account_status = isset($_SESSION['status']) ? $_SESSION['status'] : "Account Active";
 
 // ==========================================================================
-// 2. 建立真实的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
+// 2. 建立自适应的 MySQL 数据库连接并抓取当前登录用户的最新 2 条历史记录
 // ==========================================================================
-$host = "localhost";
-$db_user = "root";          // XAMPP 默认用户名
-$db_pass = "";              // XAMPP 默认密码
-$db_name = "wastescanaidb"; // 你的数据库名称
-
-$conn = new mysqli($host, $db_user, $db_pass, $db_name);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
-}
-
-$conn->set_charset("utf8mb4");
-
-/**
- * 💡 核心 SQL 查询优化：
- * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
- * 2. 过滤掉 'unknown' 的无效识别数据。
- * 3. 使用 LIMIT 2 限制数量，保持主页仪表盘的紧凑清爽。
- */
-$sql = "SELECT id, record_type, material_type, image_path, 
-        DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
-        FROM waste_records 
-        WHERE username = ? AND material_type != 'unknown'
-        ORDER BY created_at DESC 
-        LIMIT 2";
-
-// 预处理执行流程，绑定当前登录的 $username 变量
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $username); 
-$stmt->execute();
-$result = $stmt->get_result(); 
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认库名，云端自动被 railway 覆盖
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $recent_activities = [];
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_activities[] = $row;
-    }
-}
 
-$stmt->close();
-$conn->close(); // 释放连接
+try {
+    // 🌟 升级为标准 PDO 驱动，完美适配 Railway 云端内网拓扑
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    /**
+     * 💡 核心 SQL 查询优化：
+     * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
+     * 2. 过滤掉 'unknown' 的无效识别数据。
+     * 3. 完美兼容 'AI_Scan'、'scan' 和 'upload' 记录类型。
+     */
+    $sql = "SELECT id, record_type, material_type, image_path, 
+            DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
+            FROM waste_records 
+            WHERE username = ? AND material_type != 'unknown'
+            ORDER BY created_at DESC 
+            LIMIT 2";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$username]);
+    $recent_activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    // 如果是开发阶段，你可以选择把下面这行的注释打开来排查错：
+    // echo "Database error: " . $e->getMessage();
+}
 
 // 建立视觉颜色字典映射
 $material_colors = [
@@ -251,7 +244,6 @@ $material_colors = [
             border-top: 1px solid #EEEEEE; 
             flex-shrink: 0; /* 拒绝缩水 */
             background-color: #ffffff;
-            /* 智能读取全面屏手机下方的触控小黑条安全区域高度，留出合适呼吸空间 */
             margin-bottom: max(10px, env(safe-area-inset-bottom)); 
         }
         
@@ -440,7 +432,7 @@ $material_colors = [
             <a href="history.php" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Scan History</a>
         </div>
         <div class="drawer-footer">
-            <a href="Welcome.php" class="menu-item logout-item"><i class="fa-solid fa-right-from-bracket"></i> Logout Account</a>
+            <a href="welcome.php" class="menu-item logout-item"><i class="fa-solid fa-right-from-bracket"></i> Logout Account</a>
         </div>
     </nav>
 
@@ -485,7 +477,7 @@ $material_colors = [
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h4>Scan or Upload Waste <i class="fa-solid fa-image" style="color: #888; font-size: 13px;"></i></h4>
-                        <p>Upload or scan waste images — such as plastic, aluminium, or glass.</p>
+                        <p>Upload or scan waste images — such as plastic, aluminium, or paper.</p>
                     </div>
                 </div>
                 <div class="step-item">
@@ -517,11 +509,12 @@ $material_colors = [
             <?php 
             if (!empty($recent_activities)):
                 foreach ($recent_activities as $activity): 
-                    $raw_material = $activity['material_type'];
+                    $raw_material = strtolower($activity['material_type']);
                     
                     $display_name = ucfirst($raw_material);
-                    if ($raw_material === 'aluminum') {
+                    if ($raw_material === 'aluminum' || $raw_material === 'aluminium') {
                         $display_name = 'Aluminium';
+                        $raw_material = 'aluminium'; // 规整化映射
                     }
 
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
@@ -534,7 +527,8 @@ $material_colors = [
                         $final_img_src = "uploads/test_" . $fallback_name . ".jpg";
                     }
                     
-                    $is_scan   = ($activity['record_type'] === 'scan');
+                    // 🌟 修正：让判断不仅包含小写的 'scan'，也能兼容你 Python 写入的 'AI_Scan'
+                    $is_scan   = ($activity['record_type'] === 'scan' || $activity['record_type'] === 'AI_Scan');
                     $badge_cls = $is_scan ? 'method-scan' : 'method-upload';
                     $icon_cls  = $is_scan ? 'fa-camera' : 'fa-cloud-arrow-up';
                     $btn_text  = $is_scan ? 'Scan' : 'Upload';
