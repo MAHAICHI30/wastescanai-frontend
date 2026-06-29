@@ -5,11 +5,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
+$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端会自动被覆盖为 railway
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端会自动被环境变量 railway 覆盖
 $user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+$pass = $_ENV['MYSQLPASSWORD'] ?? '';
 
 $message = '';
 $message_type = 'error'; 
