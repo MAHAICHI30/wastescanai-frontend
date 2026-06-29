@@ -37,9 +37,10 @@ try {
      * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
      * 2. 过滤掉 'unknown' 的无效识别数据。
      * 3. 完美兼容 'AI_Scan'、'scan' 和 'upload' 记录类型。
+     * 4. 🌟 优化：时间格式加入日期（如 "Oct 24, 03:30 PM"），防止跨天时间混淆
      */
     $sql = "SELECT id, record_type, material_type, image_path, 
-            DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
+            DATE_FORMAT(created_at, '%b %d, %h:%i %p') AS formatted_time
             FROM waste_records 
             WHERE username = ? AND material_type != 'unknown'
             ORDER BY created_at DESC 
@@ -50,8 +51,7 @@ try {
     $recent_activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    // 如果是开发阶段，你可以选择把下面这行的注释打开来排查错：
-    // echo "Database error: " . $e->getMessage();
+    // 生产环境中可保持静默，或将错误记录到日志
 }
 
 // 建立视觉颜色字典映射
@@ -212,7 +212,7 @@ $material_colors = [
         .user-text h4 { font-size: 16px; font-weight: 600; }
         .user-text p { font-size: 12px; color: #E8F5E9; margin-top: 4px; opacity: 0.9; }
 
-        /* 🌟 核心升级：菜单区域自适应撑开并允许内部滚动 */
+        /* 🌟 菜单区域自适应撑开并允许内部滚动 */
         .drawer-menu { 
             flex: 1; 
             padding: 15px 0; 
@@ -238,7 +238,7 @@ $material_colors = [
         
         .drawer-divider { height: 1px; background-color: #EEEEEE; margin: 10px 0; }
         
-        /* 🌟 核心升级：底部固定区域，永远封底，并留出手机屏幕下缘安全边距 */
+        /* 🌟 底部固定区域，永远封底，并留出手机屏幕下缘安全边距 */
         .drawer-footer { 
             padding: 10px 0; 
             border-top: 1px solid #EEEEEE; 
@@ -527,7 +527,6 @@ $material_colors = [
                         $final_img_src = "uploads/test_" . $fallback_name . ".jpg";
                     }
                     
-                    // 🌟 修正：让判断不仅包含小写的 'scan'，也能兼容你 Python 写入的 'AI_Scan'
                     $is_scan   = ($activity['record_type'] === 'scan' || $activity['record_type'] === 'AI_Scan');
                     $badge_cls = $is_scan ? 'method-scan' : 'method-upload';
                     $icon_cls  = $is_scan ? 'fa-camera' : 'fa-cloud-arrow-up';
