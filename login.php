@@ -10,13 +10,14 @@ if (session_status() === PHP_SESSION_NONE) {
 define('GOOGLE_CLIENT_ID', '801797539566-r5ltjl5m3fj79hr4mt4b4sl5v8pli1nd.apps.googleusercontent.com');
 define('GOOGLE_CLIENT_SECRET', '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');
 
-// 🌟 线上部署重大突破：动态感知当前环境的域名（自动适配并彻底根除因 Railway 更换域名产生的 mismatch 隐患）
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-$current_domain = $protocol . $_SERVER['HTTP_HOST'];
-
-define('GOOGLE_REDIRECT_URI', strpos($_SERVER['HTTP_HOST'], 'localhost') !== false 
-    ? 'http://localhost/WasteScan%20AI/login.php' 
-    : $current_domain . '/login.php');
+// 🌟 终极环境感知：完美规避云端反向代理对 HTTPS 协议判定的内网退化误导
+if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
+    // 1. 如果是在本地测试环境
+    define('GOOGLE_REDIRECT_URI', 'http://localhost/WasteScan%20AI/login.php');
+} else {
+    // 2. 如果是在 Railway 云端线上跑，彻底锁死加密 https 协议，完美根除 redirect_uri_mismatch
+    define('GOOGLE_REDIRECT_URI', 'https://' . $_SERVER['HTTP_HOST'] . '/login.php');
+}
 
 // 🌟 线上部署核心修正：完美对接 Railway 云端内网 MySQL 数据库的环境变量
 $host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
@@ -108,6 +109,7 @@ if (isset($_GET['code'])) {
         ];
 
         $ch = curl_init();
+        // 如果云端环境出现证书报错问题可以保留此项，但请确保在正式生产环境验证
         curl_setopt($ch, CURLOPT_URL, $token_url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($token_data));
