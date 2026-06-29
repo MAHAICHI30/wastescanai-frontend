@@ -13,7 +13,7 @@ define('GOOGLE_CLIENT_SECRET', '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');
 // 🌟 线上部署重大突破：动态感知当前环境的域名（自动适配 localhost 或 Railway 公网网址）
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
 $current_domain = $protocol . $_SERVER['HTTP_HOST'];
-define('GOOGLE_REDIRECT_URI', strpos($_SERVER['HTTP_HOST'], 'localhost') !== false ? 'http://localhost/WasteScan%20AI/login.php' : $current_domain . '/login.php'); 
+define('GOOGLE_REDIRECT_URI', strpos($_SERVER['HTTP_HOST'], 'localhost') !== false ? 'https://wastescanai-frontend-production-bf6b.up.railway.app' : $current_domain . '/login.php'); 
 
 // 🌟 线上部署核心修正：完美对接 Railway 云端内网 MySQL 数据库的环境变量
 $host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
