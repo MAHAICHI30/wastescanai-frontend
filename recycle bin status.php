@@ -11,22 +11,12 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
-// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
-$port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
-$user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
-
-$conn = new mysqli($host, $user, $pass, $dbname, $port);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
-}
-$conn->set_charset("utf8mb4");
-
-$sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
-$result = $conn->query($sql);
+// 🔌 线上部署核心修正：使用 getenv() 完美自适应 Railway 环境变量与内网拓扑结构
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal';
+$port = getenv('MYSQLPORT') ?: 3306;
+$dbname = getenv('MYSQLDATABASE') ?: 'railway'; 
+$user = getenv('MYSQLUSER') ?: 'root';
+$pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $bin_data = [
     'Plastic'  => ['capacity' => 0, 'status' => 'Normal'],
@@ -34,8 +24,15 @@ $bin_data = [
     'Paper'    => ['capacity' => 0, 'status' => 'Normal']
 ];
 
-if ($result && $result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
+try {
+    // 🌟 修正：改用标准 PDO 风格连接，规避 mysqli 扩展缺失导致的崩溃
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
+    $stmt = $pdo->query($sql);
+
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $raw_name = strtolower($row['bin_name']);
         
         // 规整映射，防止拼写和大小写产生数据滑坡
@@ -57,8 +54,14 @@ if ($result && $result->num_rows > 0) {
             }
         }
     }
+    
+    // 关闭 PDO 连接
+    $pdo = null;
+
+} catch (PDOException $e) {
+    // 如果数据库连接有误，在此处捕获
+    // die("Database connection failed: " . $e->getMessage());
 }
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -226,16 +229,12 @@ $conn->close();
 
         setInterval(updateDataAutomatically, 2000);
 
-        // ==========================================
-        // 点击 Cleared 按钮触发云端 Flask 后端清零
-        // ==========================================
         document.querySelectorAll('.cleared-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const btn = this;
                 if (btn.classList.contains('status-empty')) return;
 
                 const binType = btn.id.replace('Btn', '');
-                // 🌟 材料拼写自适应转换 (前端 Aluminum ➔ 后端识别需要的 aluminium)
                 let formattedType = binType.charAt(0).toUpperCase() + binType.slice(1);
                 if (formattedType.toLowerCase() === 'aluminum') {
                     formattedType = 'aluminium';
@@ -246,7 +245,6 @@ $conn->close();
                     btn.disabled = true;
                     btn.innerText = 'Resetting...';
 
-                    // 🌟 线上部署重大核心修正：JavaScript 运行在浏览器端，必须请求 Python 服务的公网 HTTPS 链接！
                     fetch('https://wastescanai-backend-production-1b25.up.railway.app/api/reset_bin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
