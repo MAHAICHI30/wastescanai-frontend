@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // 🌟 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
 $host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端自动被覆盖为 railway
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; 
 $user = $_ENV['MYSQLUSER'] ?? 'root';
 $pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
@@ -25,6 +25,21 @@ try {
     // 注入端口支持，保证容器环境无缝切换
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // 🔄 【全自动强制修复拦截器】
+    // 查询当前 admin 的数据，确保即使之前数据库弄乱了也能被程序内部完美纠正
+    $fix_stmt = $pdo->prepare("SELECT * FROM admins WHERE username = 'admin'");
+    $fix_stmt->execute();
+    $current_admin = $fix_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($current_admin) {
+        // 如果数据库里的密码开头不是 $2y$（说明仍是明文），或者你手动填的加密串不对
+        if (strpos($current_admin['password'], '$2y$') !== 0) {
+            $secured_hash = password_hash('admin369', PASSWORD_DEFAULT);
+            $update_stmt = $pdo->prepare("UPDATE admins SET password = ? WHERE username = 'admin'");
+            $update_stmt->execute([$secured_hash]);
+        }
+    }
 } catch(PDOException $e) {
     $error_message = "Database connection failed: " . $e->getMessage();
 }
@@ -273,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo">
         </div>
         
-        <form class="login-form" action="admin.php" method="POST">
+        <form class="login-form" action="" method="POST">
             <h2 class="portal-title">Admin Portal</h2>
             
             <?php if (!empty($error_message)): ?>
