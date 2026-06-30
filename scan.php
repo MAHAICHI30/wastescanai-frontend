@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     // A. 先把摄像头截取的图片安全保存到云端前端服务器
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-    // B. 🌟 终极防御：采用 getenv() 与 $_SERVER 组合拳，誓死拿到 Railway 注入的真实 AI_URL 变量
-    $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
-    
-         $cFile = new CURLFile(realpath($target_file));
+        // B. 🌟 终极防御：采用 getenv() 与 $_SERVER 组合拳，誓死拿到 Railway 注入的真实 AI_URL 变量
+        $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
+        
+        $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
 
         $ch = curl_init();
@@ -57,6 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        # =========================================================================
+        # 🌟 核心突破注入：正面拉长 cURL 响应超时，防止低配云端加载 YOLO 模型时因超时崩溃
+        # =========================================================================
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60); # 允许建立连接的最长等待时间（秒）
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);        # 允许 cURL 函数执行的最长秒数（2分钟上限）
+        # =========================================================================
         
         $response = curl_exec($ch);
         curl_close($ch);
@@ -200,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
         }
 
         /* 扫描绿线动画 */
-        .scan-wrapper { position: relative; width: 100%; height: 100%; }
+        .scan-wrapper { relative; width: 100%; height: 100%; }
         .scan-line {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
             background: linear-gradient(to right, transparent, #00ff00, transparent);
