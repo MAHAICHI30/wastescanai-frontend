@@ -28,6 +28,9 @@ try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // 🌟【核心突破】：强制让本次 PDO 会话对齐本地 +8 时区，完美解决 Today/Yesterday 凌晨分组错乱问题！
+    $pdo->exec("SET time_zone = '+08:00';");
+
     // 🌟【隔离机制】：添加 username = ? 绑定，只拉取当前登录账号自己的数据
     $sql = "SELECT id, record_type, material_type, image_path, created_at,
             CASE 
@@ -162,7 +165,7 @@ $material_colors = [
                     // 动态从字典中读取对应的配色
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
                     
-                    // 2. 检查图片文件路径
+                    // 2. 检查图片 file 路径
                     $db_path = $activity['image_path'];
                     
                     if (!empty($db_path) && file_exists($db_path)) {
