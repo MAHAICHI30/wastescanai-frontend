@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     // A. 先把摄像头截取的图片安全保存到云端前端服务器
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-        // B. 🌟 线上部署重大修复：直接读取从 Railway 环境变量配置的动态 AI 路由链接，本地测试自动回退
-        $flask_url = $_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict';
-
-        $cFile = new CURLFile(realpath($target_file));
+    // B. 🌟 终极防御：采用 getenv() 与 $_SERVER 组合拳，誓死拿到 Railway 注入的真实 AI_URL 变量
+    $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
+    
+         $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
 
         $ch = curl_init();
