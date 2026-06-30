@@ -3,7 +3,7 @@
 // 1. 开启 Session 会话拦截机制（确保用户必须登录才能进入主页）
 // =========================================================================
 
-// 🔐 启动 Session 拦截会话，用于获取当前新注册/登录的账号用户名
+// 🔐 启动 Session 拦截会话，用于获取 current 新注册/登录的账号用户名
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
 
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-    // B. 🌟 终极防御：采用 getenv() 与 $_SERVER 组合拳，誓死拿到 Railway 注入的真实 AI_URL 变量
-    $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
+        // B. 🌟 终极防御：采用 getenv() 与 $_SERVER 组合拳，誓死拿到 Railway 注入的真实 AI_URL 变量
+        $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
         
         $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
@@ -58,6 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        # =========================================================================
+        # 🌟 核心突破注入：正面拉长 cURL 响应超时，为云端延迟加载 YOLO 模型留足解压时间
+        # =========================================================================
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60); # 允许建立连接的最长等待时间（秒）
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);        # 允许 cURL 函数执行的最长秒数（2分钟上限）
+        # =========================================================================
         
         $response = curl_exec($ch);
         curl_close($ch);
