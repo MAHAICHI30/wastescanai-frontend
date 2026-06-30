@@ -12,24 +12,32 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 }
 
 // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
-$port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
-$user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal';
+$port = getenv('MYSQLPORT') ?: 3306;
+$dbname = getenv('MYSQLDATABASE') ?: 'railway'; 
+$user = getenv('MYSQLUSER') ?: 'root';
+$pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
-// 创建数据库连接（注入端口支持）
-$conn = new mysqli($host, $user, $pass, $dbname, $port);
+$user_records = [];
 
-// 检查连接是否成功
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+try {
+    // 🌟 修正：改用标准 PDO 风格连接，规避 mysqli 扩展缺失导致的崩溃
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // 2. 编写 SQL 查询语句（只拉取注册的用户数据）
+    $sql = "SELECT id, username, email, last_active FROM users ORDER BY id ASC";
+    $stmt = $pdo->query($sql);
+    
+    // 一次性获取所有用户记录
+    $user_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 关闭连接
+    $pdo = null;
+} catch (PDOException $e) {
+    // 如果数据库连接或查询有误，可以在这里捕获
+    // die("Database connection failed: " . $e->getMessage());
 }
-$conn->set_charset("utf8mb4");
-
-// 2. 编写 SQL 查询语句（只拉取注册的用户数据）
-$sql = "SELECT id, username, email, last_active FROM users ORDER BY id ASC";
-$result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -158,9 +166,9 @@ $result = $conn->query($sql);
         </thead>
         <tbody>
             <?php
-            // 3. 循环遍历数据库，动态渲染表格行
-            if ($result && $result->num_rows > 0) {
-                while($row = $result->fetch_assoc()) {
+            // 3. 循环遍历渲染表格行
+            if (!empty($user_records)) {
+                foreach ($user_records as $row) {
                     echo "<tr>";
                     echo "<td>" . htmlspecialchars($row["id"]) . "</td>";
                     echo "<td>" . htmlspecialchars($row["username"]) . "</td>";
@@ -175,9 +183,6 @@ $result = $conn->query($sql);
             } else {
                 echo "<tr><td colspan='4' style='text-align:center;'>No user records found.</td></tr>";
             }
-            
-            // 关闭数据库连接
-            $conn->close();
             ?>
         </tbody>
     </table>
