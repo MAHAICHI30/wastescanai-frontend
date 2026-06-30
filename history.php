@@ -12,7 +12,8 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-$username = $_SESSION['username'];
+// 🌟【容错清洗】：去掉可能存在的首尾隐形空格
+$username = trim($_SESSION['username']);
 
 // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
 $host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
@@ -24,14 +25,13 @@ $pass = $_ENV['MYSQLPASSWORD'] ?? '';
 $grouped_activities = [];
 
 try {
-    // 🌟 升级为标准 PDO 驱动，完美保持技术栈一致与安全防注入
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // 🌟【核心突破】：强制让本次 PDO 会话对齐本地 +8 时区，完美解决 Today/Yesterday 凌晨分组错乱问题！
+    // 🌟【时区对齐】：强制让本次 PDO 会话对齐本地 +8 时区
     $pdo->exec("SET time_zone = '+08:00';");
 
-    // 🌟【隔离机制】：拉取当前账号的数据（允许显示 unknown 方便调试，或根据需求自行过滤）
+    // 🌟【容错 SQL 升级】：使用 TRIM() 函数，防止 Python 写入时带入看不见的 \r 或 \n 换行符
     $sql = "SELECT id, record_type, material_type, image_path, created_at,
             CASE 
                 WHEN DATE(created_at) = CURDATE() THEN 'Today'
@@ -40,7 +40,7 @@ try {
             END AS date_group,
             DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
             FROM waste_records 
-            WHERE username = ?
+            WHERE TRIM(REPLACE(REPLACE(username, '\r', ''), '\n', '')) = ?
             ORDER BY created_at DESC";
 
     $stmt = $pdo->prepare($sql);
@@ -132,7 +132,6 @@ $material_colors = [
                     
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
                     
-                    // 🌟【关键修复】：直接信任并读取 PHP 本地保存好的相对路径，绕过 file_exists 的跨容器死锁
                     $db_path = $activity['image_path'];
                     $final_img_src = (!empty($db_path)) ? $db_path : "uploads/test_" . $raw_material . ".jpg";
                     
