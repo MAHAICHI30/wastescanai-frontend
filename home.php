@@ -32,15 +32,25 @@ try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // 🌟【核心突破】：强行让当前主页会话也对齐本地 +8 时区，消除时差！
+    $pdo->exec("SET time_zone = '+08:00';");
+
     /**
      * 💡 核心 SQL 查询优化：
      * 1. 增加 WHERE username = ? 过滤，确保只拉取当前登录账号的专属数据！
      * 2. 过滤掉 'unknown' 的无效识别数据。
-     * 3. 完美兼容 'AI_Scan'、'scan' 和 'upload' 记录类型。
-     * 4. 🌟 优化：时间格式加入日期（如 "Oct 24, 03:30 PM"），防止跨天时间混淆
+     * 3. 🌟 优化：将原本的 '%b %d, %h:%i %p' 彻底重构为 24 小时制的 '%b %d, %H:%i'
      */
     $sql = "SELECT id, record_type, material_type, image_path, 
-            DATE_FORMAT(created_at, '%b %d, %h:%i %p') AS formatted_time
+            DATE_FORMAT(created_at, '%b %d, %H:%i') AS formatted_time
+            FROM waste_records 
+            WHERE username = ? AND material_type != 'unknown'
+            ORDER BY create_at DESC 
+            LIMIT 2";
+
+    // ⚠️ 注意：如果你之前的数据库字段名是 created_at，请确保这里和数据库一致（下面已改回 created_at 防止报错）
+    $sql = "SELECT id, record_type, material_type, image_path, 
+            DATE_FORMAT(created_at, '%b %d, %H:%i') AS formatted_time
             FROM waste_records 
             WHERE username = ? AND material_type != 'unknown'
             ORDER BY created_at DESC 
@@ -161,7 +171,6 @@ $material_colors = [
             left: -280px;
             width: 280px;
             height: 100vh;
-            /* 🌟 核心升级：利用 dvh 动态计算手机浏览器控制栏弹出后的真实可视高度 */
             height: 100dvh; 
             background-color: #ffffff;
             z-index: 1002;
@@ -179,7 +188,7 @@ $material_colors = [
             color: #ffffff;
             padding: 35px 20px 22px 20px;
             position: relative;
-            flex-shrink: 0; /* 🌟 保护头部高度，绝不参与内容压缩 */
+            flex-shrink: 0; 
         }
 
         .close-btn {
@@ -212,12 +221,11 @@ $material_colors = [
         .user-text h4 { font-size: 16px; font-weight: 600; }
         .user-text p { font-size: 12px; color: #E8F5E9; margin-top: 4px; opacity: 0.9; }
 
-        /* 🌟 菜单区域自适应撑开并允许内部滚动 */
         .drawer-menu { 
             flex: 1; 
             padding: 15px 0; 
             overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; /* 让 iOS 滚动更滑溜 */
+            -webkit-overflow-scrolling: touch; 
         }
         
         .menu-item {
@@ -238,11 +246,10 @@ $material_colors = [
         
         .drawer-divider { height: 1px; background-color: #EEEEEE; margin: 10px 0; }
         
-        /* 🌟 底部固定区域，永远封底，并留出手机屏幕下缘安全边距 */
         .drawer-footer { 
             padding: 10px 0; 
             border-top: 1px solid #EEEEEE; 
-            flex-shrink: 0; /* 拒绝缩水 */
+            flex-shrink: 0; 
             background-color: #ffffff;
             margin-bottom: max(10px, env(safe-area-inset-bottom)); 
         }
