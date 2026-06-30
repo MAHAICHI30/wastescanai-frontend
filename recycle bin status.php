@@ -60,7 +60,6 @@ try {
 
 } catch (PDOException $e) {
     // 如果数据库连接有误，在此处捕获
-    // die("Database connection failed: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -245,7 +244,8 @@ try {
                     btn.disabled = true;
                     btn.innerText = 'Resetting...';
 
-                    fetch('https://wastescanai-backend-production-1b25.up.railway.app/api/reset_bin', {
+                    // 🌟 核心突破修正：将原本的外网 URL 彻底换成 Railway 绝对内网高速网关！
+                    fetch('http://wastescanai-backend.railway.internal:8080/api/reset_bin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ bin_type: formattedType })
