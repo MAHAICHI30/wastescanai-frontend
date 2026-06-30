@@ -22,6 +22,9 @@ try {
     // 🌟 修正：改用 PDO 风格连接，规避 mysqli 扩展缺失导致的崩溃
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // 🌟【核心突破】：强行让统计大屏会话对齐本地 +8 时区，防止过去 24h 的计算发生 8 小时漂移！
+    $pdo->exec("SET time_zone = '+08:00';");
 } catch(PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
@@ -32,6 +35,7 @@ try {
 $today_data = ['Plastic' => [], 'Aluminum' => [], 'Paper' => []];
 
 try {
+    // 🌟 此时的 NOW() 会完美基于 GMT+8 运行，确保时间轴范围分秒不差
     $today_query = "SELECT material_type, created_at 
                     FROM waste_records 
                     WHERE created_at >= NOW() - INTERVAL 24 HOUR
@@ -64,7 +68,7 @@ try {
         }
     }
 } catch(PDOException $e) {
-    // 如果查询失败，静默处理或调试输出
+    // 异常处理
 }
 
 // =======================================================
@@ -78,6 +82,7 @@ $weekly_data = [
 ];
 
 try {
+    // 🌟 此时的 WEEK() 与 CURDATE() 同样基于本地 +8 结算，杜绝了清晨时段的数据偏差
     $weekly_query = "SELECT 
                         CASE 
                             WHEN LOWER(material_type) = 'aluminium' THEN 'aluminum'
@@ -109,7 +114,6 @@ try {
     // 处理异常
 }
 
-// 关闭连接
 $pdo = null;
 ?>
 <!DOCTYPE html>
@@ -123,8 +127,8 @@ $pdo = null;
     <style>
         body {
             margin: 0; padding: 0;
-            font-family: 'Arial', sans-serif;
             background-color: #f8f8f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex; flex-direction: column; align-items: center;
         }
         .top-nav {
@@ -196,6 +200,7 @@ $pdo = null;
                         type: 'time', 
                         time: {
                             unit: 'hour', 
+                            // 🌟 核心突破：将 Chart.js X 轴的时间气泡渲染格式直接锁定为 24 小时制（HH:mm）
                             displayFormats: { hour: 'HH:mm' } 
                         },
                         min: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), 
@@ -209,9 +214,7 @@ $pdo = null;
                             stepSize: 1,
                             precision: 0,
                             callback: function(value) {
-                                if (Math.floor(value) === value) {
-                                    return value;
-                                }
+                                if (Math.floor(value) === value) { return value; }
                             }
                         }
                     }
@@ -223,10 +226,7 @@ $pdo = null;
                     y: { 
                         beginAtZero: true, 
                         title: { display: true, text: 'Total Bins Collected / Day' },
-                        ticks: {
-                            stepSize: 1,
-                            precision: 0
-                        }
+                        ticks: { stepSize: 1, precision: 0 }
                     }
                 }
             }
@@ -237,9 +237,7 @@ $pdo = null;
 
         const wasteTrendChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                datasets: todayDatasets 
-            },
+            data: { datasets: todayDatasets },
             options: {
                 responsive: true,
                 plugins: {
