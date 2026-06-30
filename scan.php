@@ -46,11 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
     // A. 先把摄像头截取的图片安全保存到云端前端服务器
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-        // B. 🌟 线上部署重大修复：利用 Railway 私有网络变量连接 Python 后端服务
-        // 如果在云端，Railway 的私有网络会直接通过内网地址互通，速度极快且不消耗外网流量
-        $flask_url = isset($_ENV['RAILWAY_VOLUME_MOUNT_PATH']) || isset($_ENV['MYSQLHOST'])
-            ? 'http://wastescanai-backend.railway.internal:5001/predict' 
-            : 'http://127.0.0.1:5001/predict'; // 本地回退测试地址
+        // B. 🌟 线上部署重大修复：直接读取从 Railway 环境变量配置的动态 AI 路由链接，本地测试自动回退
+        $flask_url = $_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict';
 
         $cFile = new CURLFile(realpath($target_file));
         $post_data = array('image' => $cFile);
@@ -411,7 +408,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image'])) {
                         
                         if (result.status === 'success' || result.status === 'db_error') {
                             if (result.status === 'db_error') {
-                                console.warn("Database sync warning: " . result.message);
+                                // 🛠️ 语法修正：将 JavaScript 中的 "." 拼接修改为正常的 "+" 拼接
+                                console.warn("Database sync warning: " + result.message);
                             }
                             renderResultData(result.prediction, result.box);
                             resultScreen.style.display = 'flex';
