@@ -1,31 +1,43 @@
 <?php
 header('Content-Type: application/json');
 
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "wastescanaidb";
+// 🔌 线上部署核心修正：使用真实 Railway 环境变量，彻底告别 localhost 本地硬编码
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal';
+$port = getenv('MYSQLPORT') ?: 3306;
+$dbname = getenv('MYSQLDATABASE') ?: 'railway'; 
+$user = getenv('MYSQLUSER') ?: 'root';
+$pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    echo json_encode(["success" => false, "message" => "Database connection failed"]);
-    exit();
-}
-
-$sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
-$result = $conn->query($sql);
-
-// 兜底默认值
+// 兜底默认值字典
 $bin_data = [
     'Plastic'  => ['capacity' => 0, 'status' => 'Normal'],
     'Aluminum' => ['capacity' => 0, 'status' => 'Normal'],
     'Paper'    => ['capacity' => 0, 'status' => 'Normal']
 ];
 
-if ($result && $result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $type = ucfirst(strtolower($row['bin_name'])); 
+try {
+    // 🌟 统一采用标准安全 PDO 驱动
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
+    $stmt = $pdo->query($sql);
+
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $raw_name = strtolower($row['bin_name']);
+        
+        // 与大屏主页的规范完全对齐，防止因大小写导致数据滑坡
+        $type = 'Plastic';
+        if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
+            $type = 'Aluminum';
+        } elseif ($raw_name === 'paper') {
+            $type = 'Paper';
+        } elseif ($raw_name === 'plastic') {
+            $type = 'Plastic';
+        } else {
+            continue;
+        }
+
         if (isset($bin_data[$type])) {
             $bin_data[$type]['capacity'] = (int)$row['current_volume'];
             if (isset($row['status'])) {
@@ -33,10 +45,12 @@ if ($result && $result->num_rows > 0) {
             }
         }
     }
+    
+    $pdo = null;
+    echo json_encode(["success" => true, "data" => $bin_data]);
+
+} catch (PDOException $e) {
+    echo json_encode(["success" => false, "message" => "Database link error: " . $e->getMessage()]);
+    exit();
 }
-
-$conn->close();
-
-// 输出标准 JSON 格式供前端 JS 读取
-echo json_encode(["success" => true, "data" => $bin_data]);
 ?>
