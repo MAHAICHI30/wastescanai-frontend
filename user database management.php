@@ -28,8 +28,9 @@ try {
     // 🌟【核心修复补丁】：强行让读取端的会话也对齐本地 GMT+8 时区！
     $pdo->exec("SET time_zone = '+08:00';");
 
-    // 2. 🌟 终极时区提取优化：直接在 SQL 查询层使用 DATE_FORMAT 锁定 24 小时格式，彻底杜绝 TIMESTAMP 自动转换导致的 8 小时倒扣硬伤！
-    $sql = "SELECT id, username, email, DATE_FORMAT(last_active, '%Y-%m-%d %H:%M:%S') AS last_active FROM users ORDER BY id ASC";
+    // 2. 🌟 终极修正版本：将占位符修改为标准的 %H:%i:%s（大写H为24小时，小写i为分钟，小写s为秒）
+    // 这样即可原封不动输出 23:06:04，彻底消灭带有 "June" 的奇怪乱码与 8 小时时差
+    $sql = "SELECT id, username, email, DATE_FORMAT(last_active, '%Y-%m-%d %H:%i:%s') AS last_active FROM users ORDER BY id ASC";
     $stmt = $pdo->query($sql);
     
     // 一次性获取所有用户记录
