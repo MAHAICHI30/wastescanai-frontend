@@ -1,33 +1,24 @@
 <?php
 // =========================================================================
-// 1. 开启 Session 会话拦截机制（确保用户必须登录才能进入主页）
+// 1. PHP 后端核心业务逻辑：拦截异步图片 ➡️ 携带用户名呼叫 Python AI ➡️ 返回结果
 // =========================================================================
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// 🔒 终极拦截防护：如果检测到没有真实的登录 Session，直接拦截踢出，确保未登录用户不能伪造数据
+if (!isset($_SESSION['username'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'User is not logged in. Danger alert.']);
+    exit;
+}
+$username = $_SESSION['username']; 
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && isset($_POST['identity']) && $_POST['identity'] === 'gallery_upload') {
     
     ob_start();
     header('Content-Type: application/json');
-    
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'guest_user';
-    
-    $host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
-    $port = $_ENV['MYSQLPORT'] ?? 3306;
-    $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; 
-    $user = $_ENV['MYSQLUSER'] ?? 'root';
-    $pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
-
-    try {
-        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch(PDOException $e) {
-        ob_end_clean();
-        echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
-        exit;
-    }
     
     $upload_dir = 'upload/';
     if (!is_dir($upload_dir)) {
@@ -39,11 +30,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
 
     if (move_uploaded_file($_FILES['waste_image']['tmp_name'], $target_file)) {
         
-        // 🌟 终极防御变量获取
-        $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://127.0.0.1:8080/predict'));
+        // 🌟 自动化定位 Railway 内部高速网络中的 Python 后端服务
+        $flask_url = getenv('AI_URL') ?: ($_SERVER['AI_URL'] ?: ($_ENV['AI_URL'] ?? 'http://wastescanai-backend.railway.internal:8080/predict'));
         
         $cFile = new CURLFile(realpath($target_file));
-        $post_data = array('image' => $cFile);
+        
+        // 🌟【隔离核心修复】：在这里把当前真实的登录 Session 用户名当成信使连同图片一并打包，发送给 Python！
+        // 这样 Python 在更新时就会精准 WHERE username = 'Abu'。绝不误伤或污染没操作的用户！
+        $post_data = array(
+            'image' => $cFile,
+            'username' => $username
+        );
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $flask_url);
@@ -51,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         
-        // 🌟 注入 120 秒长效响应超时机制
+        // 🌟 注入超长响应超时机制，保证高负载或权重首次加载不会引发 502/504 崩溃
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60); 
         curl_setopt($ch, CURLOPT_TIMEOUT, 120);        
         
@@ -60,62 +57,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
 
         $result_data = json_decode($response, true);
         
+        ob_end_clean();
+
+        // 🌟【数据完全解耦】：所有的 INSERT 和 UPDATE 全部抹除，交由统一对齐本地 +8 时区的 Python 自动执行。
+        // PHP 只管呈现 Flask 传回的数据。这就保障了两个页面上的数字绝对是同分同秒的。
         if (isset($result_data['status']) && $result_data['status'] == 'success') {
-            $ai_detected_material = strtolower($result_data['prediction']);
-            $box_coordinates = isset($result_data['box']) ? $result_data['box'] : [15, 15, 70, 70];
-            
-            if ($ai_detected_material == 'aluminium') {
-                $db_material = 'aluminum';
-            } else {
-                $db_material = $ai_detected_material;
-            }
-
-            $db_success = true;
-            $error_msg = "";
-
-            try {
-                $pdo->beginTransaction();
-
-                $stmt1 = $pdo->prepare("INSERT INTO waste_records (username, record_type, material_type, image_path) VALUES (?, 'upload', ?, ?)");
-                $stmt1->execute([$username, $db_material, $target_file]);
-
-                $stmt2 = $pdo->prepare("UPDATE recycle_bins SET current_volume = LEAST(current_volume + 1, 100) WHERE bin_name = ?");
-                $stmt2->execute([$db_material]);
-                
-                $pdo->commit();
-            } catch (Exception $db_error) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                $db_success = false;
-                $error_msg = "MySQL Execution Error: " . $db_error->getMessage();
-            }
-
-            ob_end_clean();
-
-            if ($db_success) {
-                echo json_encode([
-                    'status' => 'success',
-                    'prediction' => $ai_detected_material,
-                    'box' => $box_coordinates,
-                    'image_path' => $target_file,
-                    'username' => $username 
-                ]);
-            } else {
-                echo json_encode([
-                    'status' => 'db_error',
-                    'message' => $error_msg,
-                    'prediction' => $ai_detected_material,
-                    'box' => $box_coordinates
-                ]);
-            }
+            echo json_encode([
+                'status' => 'success',
+                'prediction' => strtolower($result_data['prediction']),
+                'box' => isset($result_data['box']) ? $result_data['box'] : [15, 15, 70, 70],
+                'image_path' => $target_file,
+                'username' => $username 
+            ]);
         } else {
-            ob_end_clean();
-            echo json_encode(['status' => 'error', 'message' => 'AI Server recognition failed or timed out.']);
+            echo json_encode(['status' => 'error', 'message' => 'AI Server processing failed or internal database exception inside backend.']);
         }
     } else {
         ob_end_clean();
-        echo json_encode(['status' => 'error', 'message' => 'Failed to save uploaded image.']);
+        echo json_encode(['status' => 'error', 'message' => 'Failed to save uploaded gallery image on PHP server.']);
     }
     exit;
 }
@@ -199,8 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['waste_image']) && iss
                 const result = await response.json();
                 setTimeout(() => {
                     displayArea.classList.remove('scanning');
-                    if (result.status === 'success' || result.status === 'db_error') {
-                        if (result.status === 'db_error') { console.warn("Database sync warning: " + result.message); }
+                    if (result.status === 'success') {
                         renderResultData(result.prediction, result.box);
                     } else { alert("AI Engine response: " + result.message); goToHome(); }
                 }, 1500);
