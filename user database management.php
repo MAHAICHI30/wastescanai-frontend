@@ -25,6 +25,10 @@ try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // 🌟【核心修复补丁】：强行让读取端的会话也对齐本地 GMT+8 时区！
+    // 这样能确保直接读取出 23:06 绝对真实的本地时间，彻底消灭云端时区倒扣 8 小时的硬伤。
+    $pdo->exec("SET time_zone = '+08:00';");
+
     // 2. 编写 SQL 查询语句（只拉取注册的用户数据）
     $sql = "SELECT id, username, email, last_active FROM users ORDER BY id ASC";
     $stmt = $pdo->query($sql);
@@ -36,7 +40,6 @@ try {
     $pdo = null;
 } catch (PDOException $e) {
     // 如果数据库连接或查询有误，可以在这里捕获
-    // die("Database connection failed: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
