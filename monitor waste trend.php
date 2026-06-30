@@ -11,40 +11,38 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
-// 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
-$port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 本地默认，云端自动被覆盖为 railway
-$user = $_ENV['MYSQLUSER'] ?? 'root';
-$pass = $_ENV['MYSQLPASSWORD'] ?? 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
+// 🔌 线上部署核心修正：使用 getenv() 完美自适应 Railway 环境变量
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal';
+$port = getenv('MYSQLPORT') ?: 3306;
+$dbname = getenv('MYSQLDATABASE') ?: 'railway'; 
+$user = getenv('MYSQLUSER') ?: 'root';
+$pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
-// 使用面向对象风格连接 MySQL（注入端口支持）
-$conn = new mysqli($host, $user, $pass, $dbname, $port);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+try {
+    // 🌟 修正：改用 PDO 风格连接，规避 mysqli 扩展缺失导致的崩溃
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
 }
-$conn->set_charset("utf8mb4");
 
 // =======================================================
 // 2. 核心数据解析：过去 24 小时内精准扫描上传时间数据
 // =======================================================
 $today_data = ['Plastic' => [], 'Aluminum' => [], 'Paper' => []];
 
-$today_query = "SELECT material_type, created_at 
-                FROM waste_records 
-                WHERE created_at >= NOW() - INTERVAL 24 HOUR
-                ORDER BY created_at ASC";
+try {
+    $today_query = "SELECT material_type, created_at 
+                    FROM waste_records 
+                    WHERE created_at >= NOW() - INTERVAL 24 HOUR
+                    ORDER BY created_at ASC";
 
-$today_res = $conn->query($today_query);
-
-if ($today_res && $today_res->num_rows > 0) {
+    $today_stmt = $pdo->query($today_query);
     $running_counts = ['Plastic' => 0, 'Aluminum' => 0, 'Paper' => 0];
     
-    while ($row = $today_res->fetch_assoc()) {
+    while ($row = $today_stmt->fetch(PDO::FETCH_ASSOC)) {
         $raw_type = strtolower($row['material_type']);
         
-        // 🌟 强力兼容防御：将小写或拼写拼错的铝(aluminium)统一规整映射为大屏幕对应的 Aluminum 字典键
         $b_type = 'Plastic';
         if ($raw_type === 'aluminum' || $raw_type === 'aluminium') {
             $b_type = 'Aluminum';
@@ -53,7 +51,7 @@ if ($today_res && $today_res->num_rows > 0) {
         } elseif ($raw_type === 'plastic') {
             $b_type = 'Plastic';
         } else {
-            continue; // 过滤掉 unknown 的类型
+            continue; 
         }
 
         if (isset($running_counts[$b_type])) {
@@ -65,6 +63,8 @@ if ($today_res && $today_res->num_rows > 0) {
             ];
         }
     }
+} catch(PDOException $e) {
+    // 如果查询失败，静默处理或调试输出
 }
 
 // =======================================================
@@ -77,23 +77,22 @@ $weekly_data = [
     'Paper'    => [0,0,0,0,0,0,0]
 ];
 
-// 🌟 核心 SQL 升级：采用 CASE WHEN 将底层存储的各种铝拼写合并分组，防止线上统计结果遗漏
-$weekly_query = "SELECT 
-                    CASE 
-                        WHEN LOWER(material_type) = 'aluminium' THEN 'aluminum'
-                        ELSE LOWER(material_type)
-                    END as unified_material, 
-                    DAYNAME(created_at) as day_name,
-                    COUNT(id) as total_count
-                 FROM waste_records 
-                 WHERE WEEK(created_at, 1) = WEEK(CURDATE(), 1) AND YEAR(created_at) = YEAR(CURDATE())
-                 GROUP BY unified_material, day_name";
+try {
+    $weekly_query = "SELECT 
+                        CASE 
+                            WHEN LOWER(material_type) = 'aluminium' THEN 'aluminum'
+                            ELSE LOWER(material_type)
+                        END as unified_material, 
+                        DAYNAME(created_at) as day_name,
+                        COUNT(id) as total_count
+                     FROM waste_records 
+                     WHERE WEEK(created_at, 1) = WEEK(CURDATE(), 1) AND YEAR(created_at) = YEAR(CURDATE())
+                     GROUP BY unified_material, day_name";
 
-$weekly_res = $conn->query($weekly_query);
-$day_map = ['Monday'=>'Mon', 'Tuesday'=>'Tue', 'Wednesday'=>'Wed', 'Thursday'=>'Thu', 'Friday'=>'Fri', 'Saturday'=>'Sat', 'Sunday'=>'Sun'];
+    $weekly_stmt = $pdo->query($weekly_query);
+    $day_map = ['Monday'=>'Mon', 'Tuesday'=>'Tue', 'Wednesday'=>'Wed', 'Thursday'=>'Thu', 'Friday'=>'Fri', 'Saturday'=>'Sat', 'Sunday'=>'Sun'];
 
-if ($weekly_res && $weekly_res->num_rows > 0) {
-    while ($row = $weekly_res->fetch_assoc()) {
+    while ($row = $weekly_stmt->fetch(PDO::FETCH_ASSOC)) {
         $raw_mat = $row['unified_material'];
         $b_type = ($raw_mat === 'aluminum') ? 'Aluminum' : ucfirst($raw_mat);
         $full_day = $row['day_name'];
@@ -106,9 +105,12 @@ if ($weekly_res && $weekly_res->num_rows > 0) {
             }
         }
     }
+} catch(PDOException $e) {
+    // 处理异常
 }
 
-$conn->close();
+// 关闭连接
+$pdo = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
