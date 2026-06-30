@@ -17,7 +17,7 @@ $username = $_SESSION['username'];
 // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
 $host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'wastescanaidb'; // 本地默认，云端自动被覆盖为 railway
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 云端自动对齐数据库名
 $user = $_ENV['MYSQLUSER'] ?? 'root';
 $pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
@@ -58,7 +58,7 @@ try {
     // 调试期可开启：echo "Error: " . $e->getMessage();
 }
 
-// 🎨 建立国家标准视觉颜色字典映射 (PHP 端控制)
+// 🎨 建立视觉颜色字典映射 (PHP 端控制)
 $material_colors = [
     'plastic'   => '#D32F2F', // 红色
     'aluminum'  => '#FBC02D', // 黄色/金
@@ -165,16 +165,11 @@ $material_colors = [
                     // 动态从字典中读取对应的配色
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
                     
-                    // 2. 检查图片 file 路径
+                    // 2. 🌟【核心修复】：移除阻断的磁盘 file_exists 检查，直接利用本地网关相对路径渲染
                     $db_path = $activity['image_path'];
+                    $final_img_src = (!empty($db_path)) ? $db_path : "uploads/test_" . $raw_material . ".jpg";
                     
-                    if (!empty($db_path) && file_exists($db_path)) {
-                        $final_img_src = $db_path;
-                    } else {
-                        $final_img_src = "uploads/test_" . $raw_material . ".jpg";
-                    }
-                    
-                    // 完美兼容你后端写入的 'scan' 和 'AI_Scan' 记录类型
+                    // 完美兼容后端写入的记录类型
                     $is_scan   = ($activity['record_type'] === 'scan' || $activity['record_type'] === 'AI_Scan');
                     $badge_cls = $is_scan ? 'method-scan' : 'method-upload';
                     $icon_cls  = $is_scan ? 'fa-camera' : 'fa-cloud-arrow-up';
