@@ -26,11 +26,10 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // 🌟【核心修复补丁】：强行让读取端的会话也对齐本地 GMT+8 时区！
-    // 这样能确保直接读取出 23:06 绝对真实的本地时间，彻底消灭云端时区倒扣 8 小时的硬伤。
     $pdo->exec("SET time_zone = '+08:00';");
 
-    // 2. 编写 SQL 查询语句（只拉取注册的用户数据）
-    $sql = "SELECT id, username, email, last_active FROM users ORDER BY id ASC";
+    // 2. 🌟 终极时区提取优化：直接在 SQL 查询层使用 DATE_FORMAT 锁定 24 小时格式，彻底杜绝 TIMESTAMP 自动转换导致的 8 小时倒扣硬伤！
+    $sql = "SELECT id, username, email, DATE_FORMAT(last_active, '%Y-%m-%d %H:%M:%S') AS last_active FROM users ORDER BY id ASC";
     $stmt = $pdo->query($sql);
     
     // 一次性获取所有用户记录
