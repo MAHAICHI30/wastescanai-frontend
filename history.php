@@ -15,9 +15,9 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 
 // 🔌 线上部署核心修正：完美自适应 Railway 环境变量与内网拓扑结构
-$host = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+$host = $_ENV['MYSQLHOST'] ?? 'mysql.railway.internal';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; // 云端自动对齐数据库名
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway'; 
 $user = $_ENV['MYSQLUSER'] ?? 'root';
 $pass = $_ENV['MYSQLPASSWORD'] ?? ''; 
 
@@ -31,7 +31,7 @@ try {
     // 🌟【核心突破】：强制让本次 PDO 会话对齐本地 +8 时区，完美解决 Today/Yesterday 凌晨分组错乱问题！
     $pdo->exec("SET time_zone = '+08:00';");
 
-    // 🌟【隔离机制】：添加 username = ? 绑定，只拉取当前登录账号自己的数据
+    // 🌟【隔离机制】：拉取当前账号的数据（允许显示 unknown 方便调试，或根据需求自行过滤）
     $sql = "SELECT id, record_type, material_type, image_path, created_at,
             CASE 
                 WHEN DATE(created_at) = CURDATE() THEN 'Today'
@@ -40,7 +40,7 @@ try {
             END AS date_group,
             DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
             FROM waste_records 
-            WHERE material_type != 'unknown' AND username = ?
+            WHERE username = ?
             ORDER BY created_at DESC";
 
     $stmt = $pdo->prepare($sql);
@@ -58,12 +58,13 @@ try {
     // 调试期可开启：echo "Error: " . $e->getMessage();
 }
 
-// 🎨 建立视觉颜色字典映射 (PHP 端控制)
+// 🎨 建立国家标准视觉颜色字典映射
 $material_colors = [
     'plastic'   => '#D32F2F', // 红色
     'aluminum'  => '#FBC02D', // 黄色/金
     'aluminium' => '#FBC02D', // 兼容防错
-    'paper'     => '#1565C0'  // 蓝色
+    'paper'     => '#1565C0', // 蓝色
+    'unknown'   => '#777777'  // 灰色
 ];
 ?>
 <!DOCTYPE html>
@@ -75,24 +76,9 @@ $material_colors = [
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* ==========================================================================
-           2. 全局重置与基础样式
-           ========================================================================== */
-        * {
-            margin: 0; padding: 0; box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #F4F7F5; color: #333333; padding-bottom: 40px;
-        }
-
-        .app-bar {
-            background-color: #ffffff; height: 60px; display: flex;
-            align-items: center; padding: 0 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.04);
-            position: sticky; top: 0; z-index: 1000;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #F4F7F5; color: #333333; padding-bottom: 40px; }
+        .app-bar { background-color: #ffffff; height: 60px; display: flex; align-items: center; padding: 0 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 1000; }
         .back-btn { font-size: 18px; color: #2E7D32; text-decoration: none; padding: 5px; }
         .app-title { font-weight: 700; font-size: 18px; color: #2E7D32; margin-left: 12px; }
         .main-container { max-width: 600px; margin: 0 auto; padding: 16px; }
@@ -100,31 +86,14 @@ $material_colors = [
         .page-header h2 { font-size: 24px; color: #1A301F; font-weight: 700; }
         .page-header p { font-size: 13px; color: #777777; margin-top: 4px; }
         .date-group-title { font-size: 13px; font-weight: 700; color: #888888; margin: 20px 0 10px 4px; text-transform: uppercase; }
-
-        /* ==========================================================================
-           3. 独立卡片布局
-           ========================================================================== */
         .activity-card-stream { display: flex; flex-direction: column; gap: 12px; }
-        
-        .activity-item {
-            background-color: #ffffff; border-radius: 14px; padding: 12px;
-            display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.01);
-        }
-
+        .activity-item { background-color: #ffffff; border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.01); }
         .item-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-        
-        .item-thumbnail {
-            width: 75px; height: 75px; border-radius: 10px;
-            object-fit: cover; flex-shrink: 0; background-color: #EAEAEA;
-            border: 1px solid rgba(0, 0, 0, 0.04);
-        }
-
+        .item-thumbnail { width: 75px; height: 75px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background-color: #EAEAEA; border: 1px solid rgba(0, 0, 0, 0.04); }
         .item-text-box { min-width: 0; }
         .item-name { font-size: 16px; font-weight: 700; } 
         .item-time-label { font-size: 11px; color: #999999; text-transform: uppercase; margin-top: 6px; }
         .item-time { font-size: 13px; color: #555555; font-weight: 500; margin-top: 1px; }
-
         .item-right-content { flex-shrink: 0; margin-left: 10px; }
         .badge { font-size: 12px; padding: 5px 14px; border-radius: 20px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
         .method-scan { background-color: #E8F5E9; color: #2E7D32; }
@@ -155,21 +124,18 @@ $material_colors = [
                 foreach ($items as $activity): 
                     $raw_material = strtolower($activity['material_type']);
                     
-                    // 1. 标准化材质显示文字
                     $display_name = ucfirst($raw_material);
                     if ($raw_material === 'aluminum' || $raw_material === 'aluminium') {
                         $display_name = 'Aluminium';
-                        $raw_material = 'aluminium'; // 规整化映射配色
+                        $raw_material = 'aluminium';
                     }
                     
-                    // 动态从字典中读取对应的配色
                     $text_color = isset($material_colors[$raw_material]) ? $material_colors[$raw_material] : '#333333';
                     
-                    // 2. 🌟【核心修复】：移除阻断的磁盘 file_exists 检查，直接利用本地网关相对路径渲染
+                    // 🌟【关键修复】：直接信任并读取 PHP 本地保存好的相对路径，绕过 file_exists 的跨容器死锁
                     $db_path = $activity['image_path'];
                     $final_img_src = (!empty($db_path)) ? $db_path : "uploads/test_" . $raw_material . ".jpg";
                     
-                    // 完美兼容后端写入的记录类型
                     $is_scan   = ($activity['record_type'] === 'scan' || $activity['record_type'] === 'AI_Scan');
                     $badge_cls = $is_scan ? 'method-scan' : 'method-upload';
                     $icon_cls  = $is_scan ? 'fa-camera' : 'fa-cloud-arrow-up';
