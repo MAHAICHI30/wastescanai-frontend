@@ -67,7 +67,7 @@ try {
 // 建立视觉颜色字典映射
 $material_colors = [
     'plastic'   => '#D32F2F', // 红色
-    'aluminum'  => '#FBC02D', // 黄色/金
+    'aluminium'  => '#FBC02D', // 黄色/金
     'aluminium' => '#FBC02D', // 兼容防错
     'paper'     => '#1565C0'  // 蓝色
 ];
@@ -519,7 +519,7 @@ $material_colors = [
                     $raw_material = strtolower($activity['material_type']);
                     
                     $display_name = ucfirst($raw_material);
-                    if ($raw_material === 'aluminum' || $raw_material === 'aluminium') {
+                    if ($raw_material === 'aluminium' || $raw_material === 'aluminium') {
                         $display_name = 'Aluminium';
                         $raw_material = 'aluminium'; // 规整化映射
                     }
@@ -530,7 +530,7 @@ $material_colors = [
                     if (!empty($db_path) && file_exists($db_path)) {
                         $final_img_src = $db_path;
                     } else {
-                        $fallback_name = ($raw_material === 'aluminum') ? 'aluminium' : $raw_material;
+                        $fallback_name = ($raw_material === 'aluminium') ? 'aluminium' : $raw_material;
                         $final_img_src = "uploads/test_" . $fallback_name . ".jpg";
                     }
                     
