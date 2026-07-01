@@ -85,7 +85,7 @@ try {
     // 🌟 此时的 WEEK() 与 CURDATE() 同样基于本地 +8 结算，杜绝了清晨时段的数据偏差
     $weekly_query = "SELECT 
                         CASE 
-                            WHEN LOWER(material_type) = 'aluminium' THEN 'aluminum'
+                            WHEN LOWER(material_type) = 'aluminium' THEN 'aluminium'
                             ELSE LOWER(material_type)
                         END as unified_material, 
                         DAYNAME(created_at) as day_name,
@@ -183,13 +183,13 @@ $pdo = null;
     <script>
         const todayDatasets = [
             { label: 'Plastic', data: <?php echo json_encode($today_data['Plastic']); ?>, borderColor: '#ff4d4d', backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 3, tension: 0.1 },
-            { label: 'Aluminium', data: <?php echo json_encode($today_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.1 },
+            { label: 'Aluminium', data: <?php echo json_encode($today_data['Aluminium']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.1 },
             { label: 'Paper', data: <?php echo json_encode($today_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.1 }
         ];
 
         const weeklyDatasets = [
             { label: 'Plastic', data: <?php echo json_encode($weekly_data['Plastic']); ?>, borderColor: '#ff4d4d', backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 3, tension: 0.4 },
-            { label: 'Aluminium', data: <?php echo json_encode($weekly_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.4 },
+            { label: 'Aluminium', data: <?php echo json_encode($weekly_data['Aluminium']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.4 },
             { label: 'Paper', data: <?php echo json_encode($weekly_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.4 }
         ];
 
