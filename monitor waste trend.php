@@ -32,7 +32,7 @@ try {
 // =======================================================
 // 2. 核心数据解析：过去 24 小时内精准扫描上传时间数据
 // =======================================================
-$today_data = ['Plastic' => [], 'Aluminum' => [], 'Paper' => []];
+$today_data = ['Plastic' => [], 'Aluminium' => [], 'Paper' => []];
 
 try {
     // 🌟 此时的 NOW() 会完美基于 GMT+8 运行，确保时间轴范围分秒不差
@@ -42,14 +42,14 @@ try {
                     ORDER BY created_at ASC";
 
     $today_stmt = $pdo->query($today_query);
-    $running_counts = ['Plastic' => 0, 'Aluminum' => 0, 'Paper' => 0];
+    $running_counts = ['Plastic' => 0, 'Aluminium' => 0, 'Paper' => 0];
     
     while ($row = $today_stmt->fetch(PDO::FETCH_ASSOC)) {
         $raw_type = strtolower($row['material_type']);
         
         $b_type = 'Plastic';
-        if ($raw_type === 'aluminum' || $raw_type === 'aluminium') {
-            $b_type = 'Aluminum';
+        if ($raw_type === 'aluminium' || $raw_type === 'aluminium') {
+            $b_type = 'Aluminium';
         } elseif ($raw_type === 'paper') {
             $b_type = 'Paper';
         } elseif ($raw_type === 'plastic') {
@@ -77,7 +77,7 @@ try {
 $weekly_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 $weekly_data = [
     'Plastic'  => [0,0,0,0,0,0,0], 
-    'Aluminum' => [0,0,0,0,0,0,0],
+    'Aluminium' => [0,0,0,0,0,0,0],
     'Paper'    => [0,0,0,0,0,0,0]
 ];
 
@@ -99,7 +99,7 @@ try {
 
     while ($row = $weekly_stmt->fetch(PDO::FETCH_ASSOC)) {
         $raw_mat = $row['unified_material'];
-        $b_type = ($raw_mat === 'aluminum') ? 'Aluminum' : ucfirst($raw_mat);
+        $b_type = ($raw_mat === 'aluminium') ? 'Aluminium' : ucfirst($raw_mat);
         $full_day = $row['day_name'];
         
         if (isset($day_map[$full_day])) {
@@ -183,13 +183,13 @@ $pdo = null;
     <script>
         const todayDatasets = [
             { label: 'Plastic', data: <?php echo json_encode($today_data['Plastic']); ?>, borderColor: '#ff4d4d', backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 3, tension: 0.1 },
-            { label: 'Aluminum', data: <?php echo json_encode($today_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.1 },
+            { label: 'Aluminium', data: <?php echo json_encode($today_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.1 },
             { label: 'Paper', data: <?php echo json_encode($today_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.1 }
         ];
 
         const weeklyDatasets = [
             { label: 'Plastic', data: <?php echo json_encode($weekly_data['Plastic']); ?>, borderColor: '#ff4d4d', backgroundColor: 'rgba(255, 77, 77, 0.1)', borderWidth: 3, tension: 0.4 },
-            { label: 'Aluminum', data: <?php echo json_encode($weekly_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.4 },
+            { label: 'Aluminium', data: <?php echo json_encode($weekly_data['Aluminum']); ?>, borderColor: '#ffcc00', backgroundColor: 'rgba(255, 204, 0, 0.1)', borderWidth: 3, tension: 0.4 },
             { label: 'Paper', data: <?php echo json_encode($weekly_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.4 }
         ];
 
