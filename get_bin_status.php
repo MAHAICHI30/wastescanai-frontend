@@ -11,7 +11,7 @@ $pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp';
 // 兜底默认值字典
 $bin_data = [
     'Plastic'  => ['capacity' => 0, 'status' => 'Normal'],
-    'Aluminum' => ['capacity' => 0, 'status' => 'Normal'],
+    'Aluminium' => ['capacity' => 0, 'status' => 'Normal'],
     'Paper'    => ['capacity' => 0, 'status' => 'Normal']
 ];
 
@@ -28,8 +28,8 @@ try {
         
         // 与大屏主页的规范完全对齐，防止因大小写导致数据滑坡
         $type = 'Plastic';
-        if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
-            $type = 'Aluminum';
+        if ($raw_name === 'aluminium' || $raw_name === 'aluminium') {
+            $type = 'Aluminium';
         } elseif ($raw_name === 'paper') {
             $type = 'Paper';
         } elseif ($raw_name === 'plastic') {
