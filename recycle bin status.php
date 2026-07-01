@@ -37,8 +37,9 @@ try {
         
         // 规整映射，防止拼写和大小写产生数据滑坡
         $type = 'Plastic';
-        if ($raw_name === 'aluminium' || $raw_name === 'aluminium') {
+        if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
             $type = 'Aluminium';
+        }
         } elseif ($raw_name === 'paper') {
             $type = 'Paper';
         } elseif ($raw_name === 'plastic') {
@@ -134,7 +135,7 @@ try {
             <button id="plasticBtn" class="cleared-btn <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
         </div>
 
-        <div class="bin-card" id="aluminumCard">
+        <div class="bin-card" id="aluminiumCard">
             <h3>Aluminium Bin</h3>
             <div class="chart-wrapper">
                 <canvas id="aluminiumChart"></canvas>
@@ -235,7 +236,7 @@ try {
 
                 const binType = btn.id.replace('Btn', '');
                 let formattedType = binType.charAt(0).toUpperCase() + binType.slice(1);
-                if (formattedType.toLowerCase() === 'aluminum') {
+                if (formattedType.toLowerCase() === 'aluminium') {
                     formattedType = 'aluminium';
                 }
 
