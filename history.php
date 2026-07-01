@@ -32,17 +32,18 @@ try {
     $pdo->exec("SET time_zone = '+08:00';");
 
     // 🌟【容错 SQL 升级】：使用 TRIM() 函数，防止 Python 写入时带入看不见的 \r 或 \n 换行符
-    $sql = "SELECT id, record_type, material_type, image_path, created_at,
-            CASE 
-                WHEN DATE(created_at) = CURDATE() THEN 'Today'
-                WHEN DATE(created_at) = SUBDATE(CURDATE(), 1) THEN 'Yesterday'
-                ELSE DATE_FORMAT(created_at, '%M %d, %Y')
-            END AS date_group,
-            DATE_FORMAT(created_at, '%h:%i %p') AS formatted_time
-            FROM waste_records 
-            WHERE TRIM(REPLACE(REPLACE(username, '\r', ''), '\n', '')) = ?
-            ORDER BY created_at DESC";
-
+    // 将 history.php 里的查询语句替换为这个标准清洗版：
+     $sql = "SELECT id, record_type, material_type, image_path, created_at,
+        CASE 
+            WHEN DATE(created_at) = CURDATE() THEN 'Today'
+            WHEN DATE(created_at) = SUBDATE(CURDATE(), 1) THEN 'Yesterday'
+            ELSE DATE_FORMAT(created_at, '%M %d, %Y')
+        END AS date_group,
+        DATE_FORMAT(created_at, '%H:%i') AS formatted_time
+        FROM waste_records 
+        WHERE username = ? AND material_type != 'unknown'
+        ORDER BY created_at DESC";
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$username]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
