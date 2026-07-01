@@ -62,7 +62,7 @@ try {
 // 🎨 建立国家标准视觉颜色字典映射
 $material_colors = [
     'plastic'   => '#D32F2F', // 红色
-    'aluminum'  => '#FBC02D', // 黄色/金
+    'aluminium'  => '#FBC02D', // 黄色/金
     'aluminium' => '#FBC02D', // 兼容防错
     'paper'     => '#1565C0', // 蓝色
     'unknown'   => '#777777'  // 灰色
@@ -126,7 +126,7 @@ $material_colors = [
                     $raw_material = strtolower($activity['material_type']);
                     
                     $display_name = ucfirst($raw_material);
-                    if ($raw_material === 'aluminum' || $raw_material === 'aluminium') {
+                    if ($raw_material === 'aluminium' || $raw_material === 'aluminium') {
                         $display_name = 'Aluminium';
                         $raw_material = 'aluminium';
                     }
