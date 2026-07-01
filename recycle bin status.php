@@ -19,9 +19,9 @@ $user = getenv('MYSQLUSER') ?: 'root';
 $pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp'; 
 
 $bin_data = [
-    'Plastic'  => ['capacity' => 0, 'status' => 'Normal'],
+    'Plastic'   => ['capacity' => 0, 'status' => 'Normal'],
     'Aluminium' => ['capacity' => 0, 'status' => 'Normal'],
-    'Paper'    => ['capacity' => 0, 'status' => 'Normal']
+    'Paper'     => ['capacity' => 0, 'status' => 'Normal']
 ];
 
 try {
@@ -39,7 +39,6 @@ try {
         $type = 'Plastic';
         if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
             $type = 'Aluminium';
-        }
         } elseif ($raw_name === 'paper') {
             $type = 'Paper';
         } elseif ($raw_name === 'plastic') {
@@ -140,9 +139,9 @@ try {
             <div class="chart-wrapper">
                 <canvas id="aluminiumChart"></canvas>
                 <div class="chart-text">
-                    <span class="percentage" id="aluminiumPercent"><?php echo $bin_data['Aluminum']['capacity']; ?><span class="percentage-symbol">%</span></span>
+                    <span class="percentage" id="aluminiumPercent"><?php echo $bin_data['Aluminium']['capacity']; ?><span class="percentage-symbol">%</span></span>
                     <span class="label">Full</span>
-                    <span class="capacity" id="aluminiumLitre">Capacity: <?php echo $bin_data['Aluminum']['capacity']; ?>L / 100L</span>
+                    <span class="capacity" id="aluminiumLitre">Capacity: <?php echo $bin_data['Aluminium']['capacity']; ?>L / 100L</span>
                 </div>
             </div>
             <button id="aluminiumBtn" class="cleared-btn <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
@@ -202,23 +201,29 @@ try {
                             const status = dbData[binType].status;
                             const chart = chartInstances[binType];
 
-                            chart.data.datasets[0].data = [capacity, 100 - capacity];
-                            chart.options.borderRadius = capacity > 0 ? 10 : 0;
-                            chart.update();
+                            if (chart) {
+                                chart.data.datasets[0].data = [capacity, 100 - capacity];
+                                chart.options.borderRadius = capacity > 0 ? 10 : 0;
+                                chart.update();
+                            }
 
-                            document.getElementById(`${binType.toLowerCase()}Percent`).innerHTML = `${capacity}<span class="percentage-symbol">%</span>`;
-                            document.getElementById(`${binType.toLowerCase()}Litre`).innerText = `Capacity: ${capacity}L / 100L`;
+                            const percentEl = document.getElementById(`${binType.toLowerCase()}Percent`);
+                            const litreEl = document.getElementById(`${binType.toLowerCase()}Litre`);
+                            if (percentEl) percentEl.innerHTML = `${capacity}<span class="percentage-symbol">%</span>`;
+                            if (litreEl) litreEl.innerText = `Capacity: ${capacity}L / 100L`;
 
                             const btn = document.getElementById(`${binType.toLowerCase()}Btn`);
-                            if (capacity >= 95 || status === 'Full' || status === 'Dispatched') {
-                                if (btn.classList.contains('status-empty')) {
-                                    btn.className = 'cleared-btn status-full';
-                                    btn.disabled = false;
-                                }
-                            } else {
-                                if (btn.innerText === 'Cleared') {
-                                    btn.className = 'cleared-btn status-empty';
-                                    btn.disabled = true;
+                            if (btn) {
+                                if (capacity >= 95 || status === 'Full' || status === 'Dispatched') {
+                                    if (btn.classList.contains('status-empty')) {
+                                        btn.className = 'cleared-btn status-full';
+                                        btn.disabled = false;
+                                    }
+                                } else {
+                                    if (btn.innerText === 'Cleared') {
+                                        btn.className = 'cleared-btn status-empty';
+                                        btn.disabled = true;
+                                    }
                                 }
                             }
                         });
@@ -236,29 +241,26 @@ try {
 
                 const binType = btn.id.replace('Btn', '');
                 let formattedType = binType.charAt(0).toUpperCase() + binType.slice(1);
-                if (formattedType.toLowerCase() === 'aluminium') {
-                    formattedType = 'aluminium';
-                }
 
                 if (confirm(`Confirm that the ${formattedType} Bin has been emptied? This will reset the volume to 0%.`)) {
                     isResetting = true; 
                     btn.disabled = true;
                     btn.innerText = 'Resetting...';
 
-                    // 🌟 核心突破修正：将原本的外网 URL 彻底换成 Railway 绝对内网高速网关！
                     fetch('http://wastescanai-backend.railway.internal:8080/api/reset_bin', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ bin_type: formattedType })
+                        body: JSON.stringify({ bin_type: formattedType.toLowerCase() })
                     })
                     .then(res => res.json())
                     .then(data => {
-                        const displayType = formattedType === 'aluminium' ? 'Aluminium' : formattedType;
                         if (data.success) {
-                            const chart = chartInstances[displayType];
-                            chart.data.datasets[0].data = [0, 100]; 
-                            chart.options.borderRadius = 0; 
-                            chart.update(); 
+                            const chart = chartInstances[formattedType];
+                            if (chart) {
+                                chart.data.datasets[0].data = [0, 100]; 
+                                chart.options.borderRadius = 0; 
+                                chart.update(); 
+                            }
 
                             document.getElementById(`${binType}Percent`).innerHTML = `0<span class="percentage-symbol">%</span>`;
                             document.getElementById(`${binType}Litre`).innerText = `Capacity: 0L / 100L`;
@@ -267,7 +269,7 @@ try {
                             btn.className = 'cleared-btn status-empty';
                             btn.disabled = true; 
 
-                            alert(`${displayType} Bin has been successfully reset!`);
+                            alert(`${formattedType} Bin has been successfully reset!`);
                         } else {
                             alert('Failed to reset: ' + data.message);
                             btn.disabled = false;
