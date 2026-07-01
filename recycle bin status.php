@@ -20,7 +20,7 @@ $pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp';
 
 $bin_data = [
     'Plastic'  => ['capacity' => 0, 'status' => 'Normal'],
-    'Aluminum' => ['capacity' => 0, 'status' => 'Normal'],
+    'Aluminium' => ['capacity' => 0, 'status' => 'Normal'],
     'Paper'    => ['capacity' => 0, 'status' => 'Normal']
 ];
 
@@ -37,8 +37,8 @@ try {
         
         // 规整映射，防止拼写和大小写产生数据滑坡
         $type = 'Plastic';
-        if ($raw_name === 'aluminum' || $raw_name === 'aluminium') {
-            $type = 'Aluminum';
+        if ($raw_name === 'aluminium' || $raw_name === 'aluminium') {
+            $type = 'Aluminium';
         } elseif ($raw_name === 'paper') {
             $type = 'Paper';
         } elseif ($raw_name === 'plastic') {
@@ -135,16 +135,16 @@ try {
         </div>
 
         <div class="bin-card" id="aluminumCard">
-            <h3>Aluminum Bin</h3>
+            <h3>Aluminium Bin</h3>
             <div class="chart-wrapper">
-                <canvas id="aluminumChart"></canvas>
+                <canvas id="aluminiumChart"></canvas>
                 <div class="chart-text">
-                    <span class="percentage" id="aluminumPercent"><?php echo $bin_data['Aluminum']['capacity']; ?><span class="percentage-symbol">%</span></span>
+                    <span class="percentage" id="aluminiumPercent"><?php echo $bin_data['Aluminum']['capacity']; ?><span class="percentage-symbol">%</span></span>
                     <span class="label">Full</span>
-                    <span class="capacity" id="aluminumLitre">Capacity: <?php echo $bin_data['Aluminum']['capacity']; ?>L / 100L</span>
+                    <span class="capacity" id="aluminiumLitre">Capacity: <?php echo $bin_data['Aluminum']['capacity']; ?>L / 100L</span>
                 </div>
             </div>
-            <button id="aluminumBtn" class="cleared-btn <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full' || $bin_data['Aluminum']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminum']['capacity'] >= 95 || $bin_data['Aluminum']['status'] == 'Full' || $bin_data['Aluminum']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
+            <button id="aluminiumBtn" class="cleared-btn <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
         </div>
 
         <div class="bin-card" id="paperCard">
@@ -184,7 +184,7 @@ try {
         }
 
         chartInstances['Plastic'] = new Chart(document.getElementById('plasticChart'), generateChartOptions(<?php echo $bin_data['Plastic']['capacity']; ?>, '#e60000'));
-        chartInstances['Aluminum'] = new Chart(document.getElementById('aluminumChart'), generateChartOptions(<?php echo $bin_data['Aluminum']['capacity']; ?>, '#ffcc00'));
+        chartInstances['Aluminium'] = new Chart(document.getElementById('aluminiumChart'), generateChartOptions(<?php echo $bin_data['Aluminium']['capacity']; ?>, '#ffcc00'));
         chartInstances['Paper'] = new Chart(document.getElementById('paperChart'), generateChartOptions(<?php echo $bin_data['Paper']['capacity']; ?>, '#0066cc'));
 
         function updateDataAutomatically() {
@@ -252,7 +252,7 @@ try {
                     })
                     .then(res => res.json())
                     .then(data => {
-                        const displayType = formattedType === 'aluminium' ? 'Aluminum' : formattedType;
+                        const displayType = formattedType === 'aluminium' ? 'Aluminium' : formattedType;
                         if (data.success) {
                             const chart = chartInstances[displayType];
                             chart.data.datasets[0].data = [0, 100]; 
