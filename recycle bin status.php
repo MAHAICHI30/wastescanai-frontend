@@ -61,6 +61,15 @@ try {
 } catch (PDOException $e) {
     // 如果数据库连接有误，在此处捕获
 }
+
+// 🔔【新增】threshold 判断，用于圆环警示 + 顶部banner
+$threshold = 80;
+$alerts = [];
+foreach ($bin_data as $name => $info) {
+    if ($info['capacity'] >= $threshold || $info['status'] === 'Full') {
+        $alerts[] = "$name Bin ({$info['capacity']}%)";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,6 +115,57 @@ try {
         .status-empty { background-color: #e9ecef; color: #adb5bd; cursor: not-allowed; }
         .status-full { background-color: #d4edda; color: #155724; cursor: pointer; box-shadow: 0 0 10px rgba(40, 167, 69, 0.2); }
         .status-full:hover { background-color: #c3e6cb; }
+
+        /* 🔔【新增】顶部警示banner */
+        .top-banner {
+            background: #fff3f3;
+            color: #cc0000;
+            border-left: 4px solid #ff4444;
+            padding: 12px 20px;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            max-width: 1200px;
+            box-sizing: border-box;
+            border-radius: 8px;
+        }
+        /* 🔔【新增】卡片红框闪烁警示 */
+        .bin-alert {
+            border: 2px solid #ff4444 !important;
+            animation: pulse-card 1.2s infinite;
+        }
+        @keyframes pulse-card {
+            0%, 100% { box-shadow: 0 4px 15px rgba(255, 68, 68, 0.15); }
+            50% { box-shadow: 0 4px 22px rgba(255, 68, 68, 0.55); }
+        }
+        /* 🔔【新增】Needs Attention 标签 */
+        .alert-badge {
+            display: inline-block;
+            background: #ff4444;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        /* 🔔【新增】Notify Cleaner 按钮（WhatsApp绿） */
+        .notify-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 10px;
+            background-color: #25D366;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notify-btn:hover { background-color: #1ebe57; }
     </style>
 </head>
 <body>
@@ -120,9 +180,24 @@ try {
         <div class="page-title">Recycle Bin Status Daily</div>
     </header>
 
+    <?php if (count($alerts) > 0): ?>
+    <div class="top-banner" id="topBanner">
+        ⚠️ <span id="bannerCount"><?php echo count($alerts); ?></span> bin(s) need attention: <span id="bannerList"><?php echo implode(', ', $alerts); ?></span>
+    </div>
+    <?php else: ?>
+    <div class="top-banner" id="topBanner" style="display:none;">
+        ⚠️ <span id="bannerCount">0</span> bin(s) need attention: <span id="bannerList"></span>
+    </div>
+    <?php endif; ?>
+
     <main class="content-area">
-        <div class="bin-card" id="plasticCard">
+        <div class="bin-card <?php echo ($bin_data['Plastic']['capacity'] >= $threshold || $bin_data['Plastic']['status'] === 'Full') ? 'bin-alert' : ''; ?>" id="plasticCard">
             <h3>Plastic Bin</h3>
+            <?php if ($bin_data['Plastic']['capacity'] >= $threshold || $bin_data['Plastic']['status'] === 'Full'): ?>
+                <span class="alert-badge" id="plasticAlertBadge">⚠️ Needs Attention</span>
+            <?php else: ?>
+                <span class="alert-badge" id="plasticAlertBadge" style="display:none;">⚠️ Needs Attention</span>
+            <?php endif; ?>
             <div class="chart-wrapper">
                 <canvas id="plasticChart"></canvas>
                 <div class="chart-text">
@@ -132,10 +207,16 @@ try {
                 </div>
             </div>
             <button id="plasticBtn" class="cleared-btn <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
+            <button class="notify-btn" onclick="notifyCleaner('Plastic')">Notify Cleaner</button>
         </div>
 
-        <div class="bin-card" id="aluminiumCard">
+        <div class="bin-card <?php echo ($bin_data['Aluminium']['capacity'] >= $threshold || $bin_data['Aluminium']['status'] === 'Full') ? 'bin-alert' : ''; ?>" id="aluminiumCard">
             <h3>Aluminium Bin</h3>
+            <?php if ($bin_data['Aluminium']['capacity'] >= $threshold || $bin_data['Aluminium']['status'] === 'Full'): ?>
+                <span class="alert-badge" id="aluminiumAlertBadge">⚠️ Needs Attention</span>
+            <?php else: ?>
+                <span class="alert-badge" id="aluminiumAlertBadge" style="display:none;">⚠️ Needs Attention</span>
+            <?php endif; ?>
             <div class="chart-wrapper">
                 <canvas id="aluminiumChart"></canvas>
                 <div class="chart-text">
@@ -145,10 +226,16 @@ try {
                 </div>
             </div>
             <button id="aluminiumBtn" class="cleared-btn <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
+            <button class="notify-btn" onclick="notifyCleaner('Aluminium')">Notify Cleaner</button>
         </div>
 
-        <div class="bin-card" id="paperCard">
+        <div class="bin-card <?php echo ($bin_data['Paper']['capacity'] >= $threshold || $bin_data['Paper']['status'] === 'Full') ? 'bin-alert' : ''; ?>" id="paperCard">
             <h3>Paper Bin</h3>
+            <?php if ($bin_data['Paper']['capacity'] >= $threshold || $bin_data['Paper']['status'] === 'Full'): ?>
+                <span class="alert-badge" id="paperAlertBadge">⚠️ Needs Attention</span>
+            <?php else: ?>
+                <span class="alert-badge" id="paperAlertBadge" style="display:none;">⚠️ Needs Attention</span>
+            <?php endif; ?>
             <div class="chart-wrapper">
                 <canvas id="paperChart"></canvas>
                 <div class="chart-text">
@@ -158,12 +245,17 @@ try {
                 </div>
             </div>
             <button id="paperBtn" class="cleared-btn <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
+            <button class="notify-btn" onclick="notifyCleaner('Paper')">Notify Cleaner</button>
         </div>
     </main>
 
     <script>
         const chartInstances = {};
         let isResetting = false; 
+        const ALERT_THRESHOLD = 80;
+
+        // 🔔【新增】清洁工人电话号码，含国码。记得换成实际号码。
+        const CLEANER_PHONE = "60123456789";
 
         function generateChartOptions(percentage, mainColor) {
             return {
@@ -187,6 +279,47 @@ try {
         chartInstances['Aluminium'] = new Chart(document.getElementById('aluminiumChart'), generateChartOptions(<?php echo $bin_data['Aluminium']['capacity']; ?>, '#ffcc00'));
         chartInstances['Paper'] = new Chart(document.getElementById('paperChart'), generateChartOptions(<?php echo $bin_data['Paper']['capacity']; ?>, '#0066cc'));
 
+        // 🔔【新增】Notify Cleaner：写入status='Dispatched' + 打开WhatsApp预填讯息
+        function notifyCleaner(binType) {
+            fetch('http://wastescanai-backend.railway.internal:8080/api/request_pickup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bin_type: binType.toLowerCase() })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const message = encodeURIComponent(`⚠️ ${binType} Bin is full, please empty it. - WasteScan AI`);
+                    window.open(`https://wa.me/${CLEANER_PHONE}?text=${message}`, '_blank');
+                } else {
+                    alert('Failed to notify: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Failed to contact backend server.');
+            });
+        }
+
+        // 🔔【新增】依据capacity/status刷新单一bin卡片的警示状态（banner用聚合版另外处理）
+        function refreshAlertUI(binType, capacity, status) {
+            const isAlert = (capacity >= ALERT_THRESHOLD || status === 'Full');
+            const card = document.getElementById(`${binType.toLowerCase()}Card`);
+            const badge = document.getElementById(`${binType.toLowerCase()}AlertBadge`);
+
+            if (card) {
+                if (isAlert) {
+                    card.classList.add('bin-alert');
+                } else {
+                    card.classList.remove('bin-alert');
+                }
+            }
+            if (badge) {
+                badge.style.display = isAlert ? 'inline-block' : 'none';
+            }
+            return isAlert;
+        }
+
         function updateDataAutomatically() {
             if (isResetting) return; 
 
@@ -195,6 +328,7 @@ try {
                 .then(resData => {
                     if (resData.success) {
                         const dbData = resData.data;
+                        const alertList = [];
                         
                         Object.keys(dbData).forEach(binType => {
                             const capacity = dbData[binType].capacity;
@@ -226,7 +360,27 @@ try {
                                     }
                                 }
                             }
+
+                            // 🔔【新增】同步警示状态
+                            const isAlert = refreshAlertUI(binType, capacity, status);
+                            if (isAlert) {
+                                alertList.push(`${binType} Bin (${capacity}%)`);
+                            }
                         });
+
+                        // 🔔【新增】同步顶部banner
+                        const banner = document.getElementById('topBanner');
+                        const bannerCount = document.getElementById('bannerCount');
+                        const bannerListEl = document.getElementById('bannerList');
+                        if (banner && bannerCount && bannerListEl) {
+                            if (alertList.length > 0) {
+                                banner.style.display = 'block';
+                                bannerCount.innerText = alertList.length;
+                                bannerListEl.innerText = alertList.join(', ');
+                            } else {
+                                banner.style.display = 'none';
+                            }
+                        }
                     }
                 })
                 .catch(err => console.error("Polling error:", err));
@@ -268,6 +422,9 @@ try {
                             btn.innerText = 'Cleared';
                             btn.className = 'cleared-btn status-empty';
                             btn.disabled = true; 
+
+                            // 🔔【新增】reset后立即清除该卡片的警示状态
+                            refreshAlertUI(formattedType, 0, 'Normal');
 
                             alert(`${formattedType} Bin has been successfully reset!`);
                         } else {
