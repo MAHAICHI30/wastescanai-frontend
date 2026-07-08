@@ -32,6 +32,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     header('Location: admin.php');
     exit;
 }
+
+// 🔔【新增】检查是否有回收桶需要提醒admin
+$host = getenv('MYSQLHOST') ?: 'mysql.railway.internal';
+$port = getenv('MYSQLPORT') ?: 3306;
+$dbname = getenv('MYSQLDATABASE') ?: 'railway';
+$user = getenv('MYSQLUSER') ?: 'root';
+$pass = getenv('MYSQLPASSWORD') ?: 'asMgnFdMgJUNIekzFfCVeBpSWyzfJmDp';
+
+$threshold = 80;
+$alert_count = 0;
+$alert_bins = [];
+
+try {
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $sql = "SELECT bin_name, current_volume, status FROM recycle_bins";
+    $stmt = $pdo->query($sql);
+
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $vol = (int)$row['current_volume'];
+        if ($vol >= $threshold || $row['status'] === 'Full') {
+            $alert_count++;
+            $alert_bins[] = ucfirst(strtolower($row['bin_name'])) . ' (' . $vol . '%)';
+        }
+    }
+    $pdo = null;
+} catch (PDOException $e) {
+    // 连接失败就静默跳过，不影响dashboard正常显示
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -78,6 +108,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             font-size: 14px;
         }
 
+        /* 🔔【新增】顶部警示banner */
+        .dashboard-banner {
+            width: 100%;
+            background: #fff3f3;
+            color: #cc0000;
+            border-bottom: 3px solid #ff4444;
+            padding: 14px 20px;
+            font-weight: 700;
+            text-align: center;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
         /* Logo 区域 */
         .dashboard-header {
             margin-top: 60px;
@@ -118,12 +161,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             align-items: center;
             justify-content: center;
             min-height: 60px;
+            position: relative; /* 🔔【新增】给红色角标定位用 */
         }
 
         .action-card:hover {
             background-color: #f0e6d8;
             transform: translateY(-3px);
             box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 🔔【新增】红色数字角标 */
+        .badge-dot {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -137,6 +199,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             <a href="?action=logout">Logout</a>
         </div>
     </nav>
+
+    <?php if ($alert_count > 0): ?>
+    <div class="dashboard-banner">
+        ⚠️ <?php echo $alert_count; ?> bin(s) need attention: <?php echo implode(', ', $alert_bins); ?>
+    </div>
+    <?php endif; ?>
 
     <header class="dashboard-header">
         <div class="brand-logo-container">
@@ -152,6 +220,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             
             <a href="recycle%20bin%20status.php" class="action-card">
                 View Recycle Bin Status
+                <?php if ($alert_count > 0): ?>
+                    <span class="badge-dot"><?php echo $alert_count; ?></span>
+                <?php endif; ?>
             </a>
             
             <a href="user%20database%20management.php" class="action-card">
