@@ -203,11 +203,11 @@ try {
 
     <div class="controls-wrapper">
          <a href="recycle bin status.php" class="nav-link-btn">
-            View Recycle Bin Status <span class="arrow back-arrow">&rarr;</span>
+            View Recycle Bin Status <span class="arrow forward-arrow">&rarr;</span>
         </a>
         
         <a href="dashboard.php" class="nav-link-btn">
-            <span class="arrow forward-arrow">&larr;</span> Dashboard
+            <span class="arrow back-arrow">&larr;</span> Dashboard
         </a>
         
     </div>
