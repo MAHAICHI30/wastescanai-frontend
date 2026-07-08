@@ -29,7 +29,6 @@ try {
     $pdo->exec("SET time_zone = '+08:00';");
 
     // 2. 🌟 终极修正版本：将占位符修改为标准的 %H:%i:%s（大写H为24小时，小写i为分钟，小写s为秒）
-    // 这样即可原封不动输出 23:06:04，彻底消灭带有 "June" 的奇怪乱码与 8 小时时差
     $sql = "SELECT id, username, email, DATE_FORMAT(last_active, '%Y-%m-%d %H:%i:%s') AS last_active FROM users ORDER BY id ASC";
     $stmt = $pdo->query($sql);
     
@@ -108,8 +107,52 @@ try {
             color: #b08d57; /* 金棕色 */
             font-size: 30px;
             font-weight: bold;
-            margin-bottom: 30px;
+            margin-bottom: 20px; /* 略微收紧底边距，预留位置给控制条 */
         }
+
+        /* 🌟 新增：控制中心包裹层，使其与下方数据表格完美端对端对齐 */
+        .controls-wrapper {
+            width: 90%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            box-sizing: border-box;
+        }
+
+        /* 🌟 新增：跨页面完美对齐的统一样式线框胶囊按钮 */
+        .nav-link-btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: #ffffff;
+            border: 2px solid #b08d57; /* 统一的金色主题线框 */
+            color: #b08d57 !important;
+            padding: 8px 22px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            height: 38px; /* 严格对齐 38px 高度规格 */
+            box-sizing: border-box;
+        }
+        .nav-link-btn:hover {
+            background-color: #f2e1c1; /* 统一的悬停沙色反馈 */
+            color: #b08d57 !important;
+            text-decoration: none !important;
+        }
+        .nav-link-btn .arrow {
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+        /* 左箭头悬停动效 */
+        .back-arrow { margin-right: 6px; }
+        .nav-link-btn:hover .back-arrow { transform: translateX(-4px); }
+        
+        /* 右箭头悬停动效 */
+        .forward-arrow { margin-left: 6px; }
+        .nav-link-btn:hover .forward-arrow { transform: translateX(4px); }
 
         /* 表格样式 */
         .database-table {
@@ -157,6 +200,16 @@ try {
         <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo" class="dashboard-logo">
         <div class="page-title">User Database Management</div>
     </header>
+
+    <div class="controls-wrapper">
+        <a href="dashboard.php" class="nav-link-btn">
+            <span class="arrow back-arrow">&larr;</span> Dashboard
+        </a>
+        
+        <a href="recycle bin status.php" class="nav-link-btn">
+            View Recycle Bin Status <span class="arrow forward-arrow">&rarr;</span>
+        </a>
+    </div>
 
     <table class="database-table">
         <thead>
