@@ -202,13 +202,14 @@ try {
     </header>
 
     <div class="controls-wrapper">
-        <a href="dashboard.php" class="nav-link-btn">
-            <span class="arrow back-arrow">&larr;</span> Dashboard
+         <a href="recycle bin status.php" class="nav-link-btn">
+            View Recycle Bin Status <span class="arrow back-arrow">&rarr;</span>
         </a>
         
-        <a href="recycle bin status.php" class="nav-link-btn">
-            View Recycle Bin Status <span class="arrow forward-arrow">&rarr;</span>
+        <a href="dashboard.php" class="nav-link-btn">
+            <span class="arrow forward-arrow">&larr;</span> Dashboard
         </a>
+        
     </div>
 
     <table class="database-table">
