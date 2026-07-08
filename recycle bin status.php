@@ -117,7 +117,7 @@ try {
 
     <header class="page-header">
         <img src="WasteScan_AI-removebg-preview.png" alt="WasteScan AI Logo" class="dashboard-logo">
-        <div class="page-title">Recycle Bin Status</div>
+        <div class="page-title">Recycle Bin Status Daily</div>
     </header>
 
     <main class="content-area">
