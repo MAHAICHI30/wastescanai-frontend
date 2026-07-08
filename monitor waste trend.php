@@ -136,36 +136,25 @@ $pdo = null;
             display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
         }
         .top-nav a { text-decoration: none; color: #333; font-weight: bold; font-size: 14px; }
-        .top-nav .nav-right { display: flex; align-items: center; gap: 20px; }
         .breadcrumb { font-size: 14px; font-weight: bold; color: #333; }
-        
-        /* 🌟 新增：跳转状态页的箭头链接样式 */
-        .status-link {
-            display: inline-flex;
-            align-items: center;
-            color: #b08d57 !important; /* 匹配项目主题色 */
-            font-size: 14px;
-            font-weight: bold;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-        .status-link:hover {
-            color: #8a6d43 !important;
-        }
-        .status-link .arrow {
-            display: inline-block;
-            margin-left: 5px;
-            transition: transform 0.2s ease;
-        }
-        /* 鼠标悬停时，箭头向右滑动 */
-        .status-link:hover .arrow {
-            transform: translateX(4px);
-        }
-
         .page-header { text-align: center; margin-top: 40px; }
         .dashboard-logo { width: 150px; height: auto; margin-bottom: 20px; }
         .page-title { color: #b08d57; font-size: 28px; font-weight: bold; margin-top: 10px; }
-        .tab-container { display: flex; gap: 12px; margin-top: 20px; }
+        
+        /* 🌟 新增：按钮与状态链接的父级外包裹容器，使其与图表同宽且两端分流 */
+        .controls-wrapper {
+            width: 85%;
+            max-width: 850px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 移除了原本自带的 margin-top，改由 controls-wrapper 统一进行间距控制 */
+        .tab-container { display: flex; gap: 12px; }
+        
         .tab-btn {
             background-color: #fff; border: 2px solid #b08d57; color: #b08d57;
             padding: 8px 24px; font-size: 14px; font-weight: bold; border-radius: 20px;
@@ -173,8 +162,34 @@ $pdo = null;
         }
         .tab-btn:hover { background-color: #f2e1c1; }
         .tab-btn.active { background-color: #b08d57; color: #fff; }
+
+        /* 🌟 更新：精调放置于右侧后的状态跳转链接样式 */
+        .status-link {
+            display: inline-flex;
+            align-items: center;
+            color: #b08d57; /* 统一匹配项目的金色主题 */
+            font-size: 15px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .status-link:hover {
+            color: #8a6d43; /* 悬停时加深颜色 */
+            text-decoration: underline; /* 增加下划线暗示可点击 */
+        }
+        .status-link .arrow {
+            display: inline-block;
+            margin-left: 6px;
+            transition: transform 0.2s ease;
+        }
+        /* 悬停时箭头的右滑微动动画 */
+        .status-link:hover .arrow {
+            transform: translateX(4px);
+        }
+
+        /* 调整图表卡片的外边距，让它贴合上方的控制区 */
         .content-area {
-            width: 85%; max-width: 850px; margin-top: 25px; margin-bottom: 50px;
+            width: 85%; max-width: 850px; margin-top: 15px; margin-bottom: 50px;
             background-color: #ffffff; padding: 20px; border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box;
         }
@@ -186,11 +201,8 @@ $pdo = null;
         <div class="breadcrumb">
             <a href="dashboard.php">Dashboard</a> &rarr; Monitor Waste Trend
         </div>
-        <div class="nav-right">
-            <a href="recycle bin status.php" class="status-link">
-                View Recycle Bin Status <span class="arrow">&rarr;</span>
-            </a>
-            <a href="dashboard.php?action=logout" style="color: #666;">Logout</a>
+        <div class="nav-logout">
+            <a href="dashboard.php?action=logout">Logout</a>
         </div>
     </nav>
 
@@ -199,9 +211,15 @@ $pdo = null;
         <div class="page-title">Monitor Waste Trend</div>
     </header>
 
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="switchView('today', event)">Today (24h)</button>
-        <button class="tab-btn" onclick="switchView('weekly', event)">Weekly Trend</button>
+    <div class="controls-wrapper">
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchView('today', event)">Today (24h)</button>
+            <button class="tab-btn" onclick="switchView('weekly', event)">Weekly Trend</button>
+        </div>
+        
+        <a href="recycle-bin-status.php" class="status-link">
+            View Recycle Bin Status <span class="arrow">&rarr;</span>
+        </a>
     </div>
 
     <main class="content-area">
@@ -228,7 +246,6 @@ $pdo = null;
                         type: 'time', 
                         time: {
                             unit: 'hour', 
-                            // 🌟 核心突破：将 Chart.js X 轴的时间气泡渲染格式直接锁定为 24 小时制（HH:mm）
                             displayFormats: { hour: 'HH:mm' } 
                         },
                         min: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), 
