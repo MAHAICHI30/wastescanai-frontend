@@ -110,7 +110,7 @@ try {
             margin-bottom: 20px; /* 略微收紧底边距，预留位置给控制条 */
         }
 
-        /* 🌟 新增：控制中心包裹层，使其与下方数据表格完美端对端对齐 */
+        /* 🌟 控制中心包裹层：流式宽度 90% (最大 1000px)，完美与表格两侧端对端对齐 */
         .controls-wrapper {
             width: 90%;
             max-width: 1000px;
@@ -121,36 +121,40 @@ try {
             box-sizing: border-box;
         }
 
-        /* 🌟 新增：跨页面完美对齐的统一样式线框胶囊按钮 */
+        /* 🌟 跨页面高保真金色主题线框胶囊按钮 */
         .nav-link-btn {
             display: inline-flex;
             align-items: center;
             background-color: #ffffff;
-            border: 2px solid #b08d57; /* 统一的金色主题线框 */
+            border: 2px solid #b08d57; /* 专属金色主题边框 */
             color: #b08d57 !important;
             padding: 8px 22px;
             font-size: 14px;
             font-weight: bold;
-            border-radius: 20px;
+            border-radius: 20px; /* 胶囊圆角 */
             text-decoration: none;
             transition: all 0.3s ease;
-            height: 38px; /* 严格对齐 38px 高度规格 */
+            height: 38px; /* 严格强制 38px 高度规格 */
             box-sizing: border-box;
         }
+        
+        /* 悬停时的浅米沙色动态反馈 */
         .nav-link-btn:hover {
-            background-color: #f2e1c1; /* 统一的悬停沙色反馈 */
+            background-color: #f2e1c1;
             color: #b08d57 !important;
             text-decoration: none !important;
         }
+        
         .nav-link-btn .arrow {
             display: inline-block;
             transition: transform 0.2s ease;
         }
-        /* 左箭头悬停动效 */
+        
+        /* 左箭头：悬停时向左滑移特效 */
         .back-arrow { margin-right: 6px; }
         .nav-link-btn:hover .back-arrow { transform: translateX(-4px); }
         
-        /* 右箭头悬停动效 */
+        /* 右箭头：悬停时向右滑移特效 */
         .forward-arrow { margin-left: 6px; }
         .nav-link-btn:hover .forward-arrow { transform: translateX(4px); }
 
@@ -202,12 +206,12 @@ try {
     </header>
 
     <div class="controls-wrapper">
+          <a href="recycle-bin-status.php" class="nav-link-btn">
+            View Recycle Bin Status <span class="arrow forward-arrow">&rarr;</span>
+        </a>
+        
         <a href="dashboard.php" class="nav-link-btn">
             <span class="arrow back-arrow">&larr;</span> Dashboard
-        </a>
-
-        <a href="recycle bin status.php" class="nav-link-btn">
-            View Recycle Bin Status <span class="arrow forward-arrow">&rarr;</span>
         </a>
     </div>
 
