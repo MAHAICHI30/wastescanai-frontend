@@ -133,10 +133,35 @@ $pdo = null;
         }
         .top-nav {
             width: 100%; background-color: #f2e1c1; padding: 15px 30px;
-            display: flex; justify-content: space-between; box-sizing: border-box;
+            display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
         }
         .top-nav a { text-decoration: none; color: #333; font-weight: bold; font-size: 14px; }
+        .top-nav .nav-right { display: flex; align-items: center; gap: 20px; }
         .breadcrumb { font-size: 14px; font-weight: bold; color: #333; }
+        
+        /* 🌟 新增：跳转状态页的箭头链接样式 */
+        .status-link {
+            display: inline-flex;
+            align-items: center;
+            color: #b08d57 !important; /* 匹配项目主题色 */
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .status-link:hover {
+            color: #8a6d43 !important;
+        }
+        .status-link .arrow {
+            display: inline-block;
+            margin-left: 5px;
+            transition: transform 0.2s ease;
+        }
+        /* 鼠标悬停时，箭头向右滑动 */
+        .status-link:hover .arrow {
+            transform: translateX(4px);
+        }
+
         .page-header { text-align: center; margin-top: 40px; }
         .dashboard-logo { width: 150px; height: auto; margin-bottom: 20px; }
         .page-title { color: #b08d57; font-size: 28px; font-weight: bold; margin-top: 10px; }
@@ -161,8 +186,11 @@ $pdo = null;
         <div class="breadcrumb">
             <a href="dashboard.php">Dashboard</a> &rarr; Monitor Waste Trend
         </div>
-        <div class="nav-logout">
-            <a href="dashboard.php?action=logout">Logout</a>
+        <div class="nav-right">
+            <a href="recycle bin status.php" class="status-link">
+                View Recycle Bin Status <span class="arrow">&rarr;</span>
+            </a>
+            <a href="dashboard.php?action=logout" style="color: #666;">Logout</a>
         </div>
     </nav>
 
