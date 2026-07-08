@@ -93,9 +93,55 @@ foreach ($bin_data as $name => $info) {
         .breadcrumb a { text-decoration: none; color: #333; }
         .breadcrumb a:hover { text-decoration: underline; }
         .nav-logout a { text-decoration: none; color: #333; font-weight: bold; font-size: 15px; }
+        
         .page-header { text-align: center; margin-top: 50px; }
         .dashboard-logo { width: 150px; height: auto; margin-bottom: 20px; }
-        .page-title { color: #b08d57; font-size: 30px; font-weight: bold; margin-bottom: 50px; }
+        .page-title { color: #b08d57; font-size: 30px; font-weight: bold; margin-bottom: 20px; /* 调整间距容纳控制容器 */ }
+        
+        /* 🌟 新增：按钮控制中心包裹层，使其与卡片总宽（100%，最大1200px）优雅等宽对齐 */
+        .controls-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            margin-bottom: 25px;
+            box-sizing: border-box;
+        }
+
+        /* 🌟 新增：统一样式的左、右高保真线框胶囊按钮 */
+        .nav-link-btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: #ffffff;
+            border: 2px solid #b08d57; /* 匹配项目金色主题 */
+            color: #b08d57 !important;
+            padding: 8px 22px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 20px; /* 胶囊圆角 */
+            text-decoration: none;
+            transition: all 0.3s ease;
+            height: 38px; /* 强制高度，与前一页的控制按钮分毫不差 */
+            box-sizing: border-box;
+        }
+        .nav-link-btn:hover {
+            background-color: #f2e1c1; /* 统一的悬停浅沙色反馈 */
+            color: #b08d57 !important;
+            text-decoration: none !important;
+        }
+        .nav-link-btn .arrow {
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+        /* 左箭头动效 */
+        .back-arrow { margin-right: 6px; }
+        .nav-link-btn:hover .back-arrow { transform: translateX(-4px); }
+        /* 右箭头动效 */
+        .forward-arrow { margin-left: 6px; }
+        .nav-link-btn:hover .forward-arrow { transform: translateX(4px); }
+
         .content-area { display: flex; justify-content: center; gap: 40px; padding: 20px; max-width: 1200px; width: 100%; box-sizing: border-box; }
         
         .bin-card {
@@ -180,6 +226,16 @@ foreach ($bin_data as $name => $info) {
         <div class="page-title">Recycle Bin Status Daily</div>
     </header>
 
+    <div class="controls-wrapper">
+        <a href="monitor waste trend.php" class="nav-link-btn">
+            <span class="arrow back-arrow">&larr;</span> Monitor Waste Trend
+        </a>
+        
+        <a href="user database management.php" class="nav-link-btn">
+            Manage User Database <span class="arrow forward-arrow">&rarr;</span>
+        </a>
+    </div>
+
     <?php if (count($alerts) > 0): ?>
     <div class="top-banner" id="topBanner">
         ⚠️ <span id="bannerCount"><?php echo count($alerts); ?></span> bin(s) need attention: <span id="bannerList"><?php echo implode(', ', $alerts); ?></span>
@@ -254,7 +310,7 @@ foreach ($bin_data as $name => $info) {
         let isResetting = false; 
         const ALERT_THRESHOLD = 80;
 
-        // 🔔【新增】清洁工人电话号码，含国码。记得换成实际号码。
+        // 🔔清洁工人电话号码
         const CLEANER_PHONE = "60123456789";
 
         function generateChartOptions(percentage, mainColor) {
@@ -279,7 +335,6 @@ foreach ($bin_data as $name => $info) {
         chartInstances['Aluminium'] = new Chart(document.getElementById('aluminiumChart'), generateChartOptions(<?php echo $bin_data['Aluminium']['capacity']; ?>, '#ffcc00'));
         chartInstances['Paper'] = new Chart(document.getElementById('paperChart'), generateChartOptions(<?php echo $bin_data['Paper']['capacity']; ?>, '#0066cc'));
 
-        // 🔔【新增】Notify Cleaner：写入status='Dispatched' + 打开WhatsApp预填讯息
         function notifyCleaner(binType) {
             fetch('http://wastescanai-backend.railway.internal:8080/api/request_pickup', {
                 method: 'POST',
@@ -301,7 +356,6 @@ foreach ($bin_data as $name => $info) {
             });
         }
 
-        // 🔔【新增】依据capacity/status刷新单一bin卡片的警示状态（banner用聚合版另外处理）
         function refreshAlertUI(binType, capacity, status) {
             const isAlert = (capacity >= ALERT_THRESHOLD || status === 'Full');
             const card = document.getElementById(`${binType.toLowerCase()}Card`);
@@ -311,7 +365,7 @@ foreach ($bin_data as $name => $info) {
                 if (isAlert) {
                     card.classList.add('bin-alert');
                 } else {
-                    card.classList.remove('bin-alert');
+                    card.className = card.className.replace('bin-alert', '').trim();
                 }
             }
             if (badge) {
@@ -361,14 +415,12 @@ foreach ($bin_data as $name => $info) {
                                 }
                             }
 
-                            // 🔔【新增】同步警示状态
                             const isAlert = refreshAlertUI(binType, capacity, status);
                             if (isAlert) {
                                 alertList.push(`${binType} Bin (${capacity}%)`);
                             }
                         });
 
-                        // 🔔【新增】同步顶部banner
                         const banner = document.getElementById('topBanner');
                         const bannerCount = document.getElementById('bannerCount');
                         const bannerListEl = document.getElementById('bannerList');
@@ -423,7 +475,6 @@ foreach ($bin_data as $name => $info) {
                             btn.className = 'cleared-btn status-empty';
                             btn.disabled = true; 
 
-                            // 🔔【新增】reset后立即清除该卡片的警示状态
                             refreshAlertUI(formattedType, 0, 'Normal');
 
                             alert(`${formattedType} Bin has been successfully reset!`);
