@@ -141,53 +141,61 @@ $pdo = null;
         .dashboard-logo { width: 150px; height: auto; margin-bottom: 20px; }
         .page-title { color: #b08d57; font-size: 28px; font-weight: bold; margin-top: 10px; }
         
-        /* 🌟 新增：按钮与状态链接的父级外包裹容器，使其与图表同宽且两端分流 */
+        /* 🌟 核心修正：加入垂直居中对齐，让左边按钮和右边按钮保持在同一水平线上 */
         .controls-wrapper {
             width: 85%;
             max-width: 850px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
+            align-items: center; /* 👈 关键：强制让高度不同的元素垂直中心点对齐 */
+            margin-top: 30px;
             box-sizing: border-box;
         }
 
-        /* 移除了原本自带的 margin-top，改由 controls-wrapper 统一进行间距控制 */
         .tab-container { display: flex; gap: 12px; }
         
         .tab-btn {
             background-color: #fff; border: 2px solid #b08d57; color: #b08d57;
             padding: 8px 24px; font-size: 14px; font-weight: bold; border-radius: 20px;
             cursor: pointer; transition: all 0.3s ease;
+            height: 38px; box-sizing: border-box;
         }
         .tab-btn:hover { background-color: #f2e1c1; }
         .tab-btn.active { background-color: #b08d57; color: #fff; }
 
-        /* 🌟 更新：精调放置于右侧后的状态跳转链接样式 */
+        /* 🌟 核心修正：将跳转链接包装成“线框圆角按钮”，克隆并对齐左侧按钮的规格 */
         .status-link {
             display: inline-flex;
             align-items: center;
-            color: #b08d57; /* 统一匹配项目的金色主题 */
-            font-size: 15px;
+            background-color: #ffffff;
+            border: 2px solid #b08d57; /* 使用项目金色主题边框 */
+            color: #b08d57 !important;
+            padding: 8px 20px; /* 舒适的内部间距 */
+            font-size: 14px;
             font-weight: bold;
+            border-radius: 20px; /* 胶囊圆角 */
             text-decoration: none;
-            transition: color 0.2s ease;
+            transition: all 0.3s ease;
+            height: 38px; /* 👈 关键：强制固定高度与 tab-btn 丝毫不差 */
+            box-sizing: border-box;
         }
+        
+        /* 鼠标悬停时的反馈：变为浅沙色背景 */
         .status-link:hover {
-            color: #8a6d43; /* 悬停时加深颜色 */
-            text-decoration: underline; /* 增加下划线暗示可点击 */
+            background-color: #f2e1c1;
+            color: #b08d57 !important;
+            text-decoration: none !important; /* 移除原本单薄的文字下划线 */
         }
+        
         .status-link .arrow {
             display: inline-block;
             margin-left: 6px;
             transition: transform 0.2s ease;
         }
-        /* 悬停时箭头的右滑微动动画 */
         .status-link:hover .arrow {
             transform: translateX(4px);
         }
 
-        /* 调整图表卡片的外边距，让它贴合上方的控制区 */
         .content-area {
             width: 85%; max-width: 850px; margin-top: 15px; margin-bottom: 50px;
             background-color: #ffffff; padding: 20px; border-radius: 8px;
@@ -217,7 +225,7 @@ $pdo = null;
             <button class="tab-btn" onclick="switchView('weekly', event)">Weekly Trend</button>
         </div>
         
-        <a href="recycle-bin-status.php" class="status-link">
+        <a href="recycle bin status.php" class="status-link">
             View Recycle Bin Status <span class="arrow">&rarr;</span>
         </a>
     </div>
