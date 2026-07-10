@@ -62,7 +62,7 @@ try {
     // 如果数据库连接有误，在此处捕获
 }
 
-// 🔔【新增】threshold 判断，用于圆环警示 + 顶部banner
+// 🔔 threshold 判断，用于圆环警示 + 顶部banner（admin端提醒用，通知清洁工人由admin自行透过其他管道处理）
 $threshold = 80;
 $alerts = [];
 foreach ($bin_data as $name => $info) {
@@ -96,9 +96,8 @@ foreach ($bin_data as $name => $info) {
         
         .page-header { text-align: center; margin-top: 50px; }
         .dashboard-logo { width: 150px; height: auto; margin-bottom: 20px; }
-        .page-title { color: #b08d57; font-size: 30px; font-weight: bold; margin-bottom: 20px; /* 调整间距容纳控制容器 */ }
+        .page-title { color: #b08d57; font-size: 30px; font-weight: bold; margin-bottom: 20px; }
         
-        /* 🌟 新增：按钮控制中心包裹层，使其与卡片总宽（100%，最大1200px）优雅等宽对齐 */
         .controls-wrapper {
             width: 100%;
             max-width: 1200px;
@@ -110,24 +109,23 @@ foreach ($bin_data as $name => $info) {
             box-sizing: border-box;
         }
 
-        /* 🌟 新增：统一样式的左、右高保真线框胶囊按钮 */
         .nav-link-btn {
             display: inline-flex;
             align-items: center;
             background-color: #ffffff;
-            border: 2px solid #b08d57; /* 匹配项目金色主题 */
+            border: 2px solid #b08d57;
             color: #b08d57 !important;
             padding: 8px 22px;
             font-size: 14px;
             font-weight: bold;
-            border-radius: 20px; /* 胶囊圆角 */
+            border-radius: 20px;
             text-decoration: none;
             transition: all 0.3s ease;
-            height: 38px; /* 强制高度，与前一页的控制按钮分毫不差 */
+            height: 38px;
             box-sizing: border-box;
         }
         .nav-link-btn:hover {
-            background-color: #f2e1c1; /* 统一的悬停浅沙色反馈 */
+            background-color: #f2e1c1;
             color: #b08d57 !important;
             text-decoration: none !important;
         }
@@ -135,10 +133,8 @@ foreach ($bin_data as $name => $info) {
             display: inline-block;
             transition: transform 0.2s ease;
         }
-        /* 左箭头动效 */
         .back-arrow { margin-right: 6px; }
         .nav-link-btn:hover .back-arrow { transform: translateX(-4px); }
-        /* 右箭头动效 */
         .forward-arrow { margin-left: 6px; }
         .nav-link-btn:hover .forward-arrow { transform: translateX(4px); }
 
@@ -162,7 +158,6 @@ foreach ($bin_data as $name => $info) {
         .status-full { background-color: #d4edda; color: #155724; cursor: pointer; box-shadow: 0 0 10px rgba(40, 167, 69, 0.2); }
         .status-full:hover { background-color: #c3e6cb; }
 
-        /* 🔔【新增】顶部警示banner */
         .top-banner {
             background: #fff3f3;
             color: #cc0000;
@@ -176,7 +171,6 @@ foreach ($bin_data as $name => $info) {
             box-sizing: border-box;
             border-radius: 8px;
         }
-        /* 🔔【新增】卡片红框闪烁警示 */
         .bin-alert {
             border: 2px solid #ff4444 !important;
             animation: pulse-card 1.2s infinite;
@@ -185,7 +179,6 @@ foreach ($bin_data as $name => $info) {
             0%, 100% { box-shadow: 0 4px 15px rgba(255, 68, 68, 0.15); }
             50% { box-shadow: 0 4px 22px rgba(255, 68, 68, 0.55); }
         }
-        /* 🔔【新增】Needs Attention 标签 */
         .alert-badge {
             display: inline-block;
             background: #ff4444;
@@ -196,22 +189,6 @@ foreach ($bin_data as $name => $info) {
             font-weight: bold;
             margin-bottom: 12px;
         }
-        /* 🔔【新增】Notify Cleaner 按钮（WhatsApp绿） */
-        .notify-btn {
-            border: none;
-            border-radius: 8px;
-            padding: 10px 24px;
-            font-size: 14px;
-            font-weight: bold;
-            width: 100%;
-            box-sizing: border-box;
-            margin-top: 10px;
-            background-color: #25D366;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .notify-btn:hover { background-color: #1ebe57; }
     </style>
 </head>
 <body>
@@ -263,7 +240,6 @@ foreach ($bin_data as $name => $info) {
                 </div>
             </div>
             <button id="plasticBtn" class="cleared-btn <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Plastic']['capacity'] >= 95 || $bin_data['Plastic']['status'] == 'Full' || $bin_data['Plastic']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
-            <button class="notify-btn" onclick="notifyCleaner('Plastic')">Notify Cleaner</button>
         </div>
 
         <div class="bin-card <?php echo ($bin_data['Aluminium']['capacity'] >= $threshold || $bin_data['Aluminium']['status'] === 'Full') ? 'bin-alert' : ''; ?>" id="aluminiumCard">
@@ -282,7 +258,6 @@ foreach ($bin_data as $name => $info) {
                 </div>
             </div>
             <button id="aluminiumBtn" class="cleared-btn <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Aluminium']['capacity'] >= 95 || $bin_data['Aluminium']['status'] == 'Full' || $bin_data['Aluminium']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
-            <button class="notify-btn" onclick="notifyCleaner('Aluminium')">Notify Cleaner</button>
         </div>
 
         <div class="bin-card <?php echo ($bin_data['Paper']['capacity'] >= $threshold || $bin_data['Paper']['status'] === 'Full') ? 'bin-alert' : ''; ?>" id="paperCard">
@@ -301,7 +276,6 @@ foreach ($bin_data as $name => $info) {
                 </div>
             </div>
             <button id="paperBtn" class="cleared-btn <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? 'status-full' : 'status-empty'; ?>" <?php echo ($bin_data['Paper']['capacity'] >= 95 || $bin_data['Paper']['status'] == 'Full' || $bin_data['Paper']['status'] == 'Dispatched') ? '' : 'disabled'; ?>>Cleared</button>
-            <button class="notify-btn" onclick="notifyCleaner('Paper')">Notify Cleaner</button>
         </div>
     </main>
 
@@ -310,8 +284,8 @@ foreach ($bin_data as $name => $info) {
         let isResetting = false; 
         const ALERT_THRESHOLD = 80;
 
-        // 🔔清洁工人电话号码
-        const CLEANER_PHONE = "60123456789";
+        // 🌟 使用Railway公开网址（Public Domain），浏览器才能连得到
+        const BACKEND_URL = "https://wastescanai-backend-production-1b25.up.railway.app";
 
         function generateChartOptions(percentage, mainColor) {
             return {
@@ -334,27 +308,6 @@ foreach ($bin_data as $name => $info) {
         chartInstances['Plastic'] = new Chart(document.getElementById('plasticChart'), generateChartOptions(<?php echo $bin_data['Plastic']['capacity']; ?>, '#e60000'));
         chartInstances['Aluminium'] = new Chart(document.getElementById('aluminiumChart'), generateChartOptions(<?php echo $bin_data['Aluminium']['capacity']; ?>, '#ffcc00'));
         chartInstances['Paper'] = new Chart(document.getElementById('paperChart'), generateChartOptions(<?php echo $bin_data['Paper']['capacity']; ?>, '#0066cc'));
-
-        function notifyCleaner(binType) {
-            fetch('http://wastescanai-backend.railway.internal:8080/api/request_pickup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bin_type: binType.toLowerCase() })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const message = encodeURIComponent(`⚠️ ${binType} Bin is full, please empty it. - WasteScan AI`);
-                    window.open(`https://wa.me/${CLEANER_PHONE}?text=${message}`, '_blank');
-                } else {
-                    alert('Failed to notify: ' + data.message);
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('Failed to contact backend server.');
-            });
-        }
 
         function refreshAlertUI(binType, capacity, status) {
             const isAlert = (capacity >= ALERT_THRESHOLD || status === 'Full');
@@ -453,7 +406,7 @@ foreach ($bin_data as $name => $info) {
                     btn.disabled = true;
                     btn.innerText = 'Resetting...';
 
-                    fetch('http://wastescanai-backend.railway.internal:8080/api/reset_bin', {
+                    fetch(`${BACKEND_URL}/api/reset_bin`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ bin_type: formattedType.toLowerCase() })
