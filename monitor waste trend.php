@@ -81,6 +81,13 @@ $weekly_data = [
     'Paper'    => [0,0,0,0,0,0,0]
 ];
 
+// 🌟 新增：记录每天每种材料"最后一次扫描"的具体时间，供 tooltip 显示用
+$weekly_last_time = [
+    'Plastic'  => [null,null,null,null,null,null,null],
+    'Aluminium' => [null,null,null,null,null,null,null],
+    'Paper'    => [null,null,null,null,null,null,null]
+];
+
 // 🌟 新增：算出本周(周一到周日)每一天对应的实际日期，供前端 tooltip 显示用
 // 与数据库 "SET time_zone = '+08:00'" 保持一致，避免跨零点日期算错
 date_default_timezone_set('Asia/Kuala_Lumpur');
@@ -104,7 +111,8 @@ try {
                             ELSE LOWER(material_type)
                         END as unified_material, 
                         DAYNAME(created_at) as day_name,
-                        COUNT(id) as total_count
+                        COUNT(id) as total_count,
+                        MAX(created_at) as last_time
                      FROM waste_records 
                      WHERE WEEK(created_at, 1) = WEEK(CURDATE(), 1) AND YEAR(created_at) = YEAR(CURDATE())
                      GROUP BY unified_material, day_name";
@@ -122,6 +130,7 @@ try {
             $idx = array_search($short_day, $weekly_labels);
             if ($idx !== false && isset($weekly_data[$b_type])) {
                 $weekly_data[$b_type][$idx] = (int)$row['total_count'];
+                $weekly_last_time[$b_type][$idx] = $row['last_time']; // 例如 2026-07-08 16:42:00
             }
         }
     }
@@ -265,6 +274,9 @@ $pdo = null;
         // 🌟 新增：本周每天对应的实际日期，例如 ["2026-07-06", "2026-07-07", ...]，供 tooltip 标题使用
         const weeklyDates = <?php echo json_encode($weekly_dates); ?>;
 
+        // 🌟 新增：每天每种材料"最后一次扫描"的具体时间，供 tooltip 显示用
+        const weeklyLastTime = <?php echo json_encode($weekly_last_time); ?>;
+
         const viewOptions = {
             today: {
                 scales: {
@@ -321,10 +333,21 @@ $pdo = null;
 
                                 if (currentView === 'weekly') {
                                     const idx = context[0].dataIndex;
+                                    const materialLabel = context[0].dataset.label;
                                     const dateObj = new Date(weeklyDates[idx] + 'T00:00:00');
-                                    return dateObj.toLocaleDateString('en-US', {
+                                    const dateStr = dateObj.toLocaleDateString('en-US', {
                                         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
                                     });
+
+                                    const lastTimeRaw = weeklyLastTime[materialLabel] ? weeklyLastTime[materialLabel][idx] : null;
+                                    if (lastTimeRaw) {
+                                        const lastTimeObj = new Date(lastTimeRaw.replace(' ', 'T'));
+                                        const timeStr = lastTimeObj.toLocaleTimeString('en-US', {
+                                            hour: '2-digit', minute: '2-digit'
+                                        });
+                                        return dateStr + '  (last scan ' + timeStr + ')';
+                                    }
+                                    return dateStr;
                                 } else {
                                     const rawX = context[0].raw.x;
                                     const dateObj = new Date(rawX);
