@@ -81,6 +81,21 @@ $weekly_data = [
     'Paper'    => [0,0,0,0,0,0,0]
 ];
 
+// 🌟 新增：算出本周(周一到周日)每一天对应的实际日期，供前端 tooltip 显示用
+// 与数据库 "SET time_zone = '+08:00'" 保持一致，避免跨零点日期算错
+date_default_timezone_set('Asia/Kuala_Lumpur');
+$today_dt = new DateTime('now');
+$dow = (int)$today_dt->format('N');      // 1=Mon ... 7=Sun
+$monday_dt = clone $today_dt;
+$monday_dt->modify('-' . ($dow - 1) . ' days');
+
+$weekly_dates = [];
+for ($i = 0; $i < 7; $i++) {
+    $d = clone $monday_dt;
+    $d->modify("+$i days");
+    $weekly_dates[] = $d->format('Y-m-d'); // 例如 2026-07-06
+}
+
 try {
     // 🌟 此时的 WEEK() 与 CURDATE() 同样基于本地 +8 结算，杜绝了清晨时段的数据偏差
     $weekly_query = "SELECT 
@@ -247,6 +262,9 @@ $pdo = null;
             { label: 'Paper', data: <?php echo json_encode($weekly_data['Paper']); ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51, 153, 255, 0.1)', borderWidth: 3, tension: 0.4 }
         ];
 
+        // 🌟 新增：本周每天对应的实际日期，例如 ["2026-07-06", "2026-07-07", ...]，供 tooltip 标题使用
+        const weeklyDates = <?php echo json_encode($weekly_dates); ?>;
+
         const viewOptions = {
             today: {
                 scales: {
@@ -294,7 +312,31 @@ $pdo = null;
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { position: 'top', labels: { font: { size: 14 } } }
+                    legend: { position: 'top', labels: { font: { size: 14 } } },
+                    // 🌟 新增：自定义 tooltip 标题，让 Weekly Trend 显示具体日期，Today (24h) 显示日期+时间
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                if (!context.length) return '';
+
+                                if (currentView === 'weekly') {
+                                    const idx = context[0].dataIndex;
+                                    const dateObj = new Date(weeklyDates[idx] + 'T00:00:00');
+                                    return dateObj.toLocaleDateString('en-US', {
+                                        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                                    });
+                                } else {
+                                    const rawX = context[0].raw.x;
+                                    const dateObj = new Date(rawX);
+                                    return dateObj.toLocaleDateString('en-US', {
+                                        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                                    }) + '  ' + dateObj.toLocaleTimeString('en-US', {
+                                        hour: '2-digit', minute: '2-digit'
+                                    });
+                                }
+                            }
+                        }
+                    }
                 },
                 scales: viewOptions[currentView].scales
             }
