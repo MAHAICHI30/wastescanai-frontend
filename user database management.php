@@ -206,7 +206,7 @@ try {
     </header>
 
     <div class="controls-wrapper">
-        <a href="recycle-bin-status.php" class="nav-link-btn">
+        <a href="recycle bin status.php" class="nav-link-btn">
             <span class="arrow back-arrow">&larr;</span> View Recycle Bin Status
         </a>
 
